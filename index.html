@@ -1,0 +1,4412 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健康旅行 - Health Travel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --primary: #2E7D32;
+            --primary-light: #4CAF50;
+            --primary-dark: #1B5E20;
+            --secondary: #00897B;
+            --accent: #FF6F00;
+            --background: #E8F5E9;
+            --text: #1B5E20;
+            --white: #FFFFFF;
+            --sdg-blue: #5FC0D4;
+            --sdg-green: #58D14C;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', 'Noto Sans SC', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans', sans-serif;
+            background: linear-gradient(135deg, var(--background) 0%, #C8E6C9 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .page {
+            display: none;
+            min-height: 100vh;
+            padding: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .page.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Language Selector */
+        .language-selector {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+            background: var(--white);
+            border-radius: 25px;
+            padding: 8px 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .language-selector.visible {
+            display: flex;
+        }
+
+        .language-selector svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--primary);
+        }
+
+        .language-selector span {
+            font-size: 14px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .language-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: var(--white);
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            overflow: hidden;
+            display: none;
+            min-width: 150px;
+        }
+
+        .language-dropdown.show {
+            display: block;
+        }
+
+        .language-option {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .language-option:hover {
+            background: var(--background);
+        }
+
+        .language-option.active {
+            background: var(--primary-light);
+            color: var(--white);
+        }
+
+        /* Welcome Page */
+        .welcome-page {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(180deg, var(--background) 0%, #A5D6A7 100%);
+        }
+
+        .welcome-logo {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 30px;
+        }
+
+        .welcome-title {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .welcome-subtitle {
+            font-size: 1.5rem;
+            color: var(--secondary);
+            margin-bottom: 50px;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: var(--white);
+            border: none;
+            padding: 20px 60px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(46, 125, 50, 0.4);
+            transition: all 0.3s;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(46, 125, 50, 0.5);
+        }
+
+        .skip-btn {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 12px 40px;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        .skip-btn:hover {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .privacy-note {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 20px;
+            max-width: 300px;
+            line-height: 1.4;
+        }
+
+        .sdg-badge {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: var(--white);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            font-size: 12px;
+            max-width: 200px;
+        }
+
+        .sdg-badge h4 {
+            color: var(--primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .sdg-badge p {
+            color: #666;
+            line-height: 1.5;
+        }
+
+        /* Form Pages */
+        .form-page {
+            padding-top: 80px;
+            align-items: center;
+        }
+
+        .form-card {
+            background: var(--white);
+            border-radius: 25px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .form-title {
+            font-size: 1.8rem;
+            color: var(--primary-dark);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 1rem;
+            color: var(--text);
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #E0E0E0;
+            border-radius: 15px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #E0E0E0;
+            border-radius: 15px;
+            font-size: 1rem;
+            background: var(--white);
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .checkbox-group, .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .checkbox-item, .radio-item {
+            background: var(--background);
+            border: 2px solid #E0E0E0;
+            border-radius: 15px;
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .checkbox-item:hover, .radio-item:hover {
+            border-color: var(--primary);
+        }
+
+        .checkbox-item.selected, .radio-item.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--white);
+        }
+
+        .checkbox-item input, .radio-item input {
+            display: none;
+        }
+
+        .next-btn, .back-btn {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .next-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: var(--white);
+        }
+
+        .back-btn {
+            background: #E0E0E0;
+            color: #666;
+        }
+
+        .next-btn:hover, .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        /* Map Page */
+        .map-page {
+            padding: 70px 10px 20px;
+        }
+
+        .map-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .map-header h2 {
+            color: var(--primary-dark);
+            font-size: 1.5rem;
+        }
+
+        .map-container {
+            position: relative;
+            background: var(--white);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+
+        .macau-map {
+            width: 100%;
+            height: 500px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 20px;
+            background: #f0f4f8;
+        }
+
+        /* Leaflet 容器 */
+        #leafletMap {
+            border-radius: 20px;
+        }
+
+        /* 自訂脈衝標記 */
+        .custom-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .marker-pulse {
+            position: relative;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .marker-dot {
+            width: 16px;
+            height: 16px;
+            background: var(--primary);
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(46, 125, 50, 0.6), 0 0 20px rgba(46, 125, 50, 0.3);
+            position: absolute;
+            z-index: 2;
+            transition: all 0.3s;
+        }
+
+        .custom-marker:hover .marker-dot {
+            background: #FF5722;
+            border-color: #FF5722;
+            box-shadow: 0 0 15px rgba(255, 87, 34, 0.8);
+            transform: scale(1.2);
+        }
+
+        .marker-ring {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(46, 125, 50, 0.5);
+            border-radius: 50%;
+            position: absolute;
+            z-index: 1;
+            animation: marker-pulse-ring 2s infinite;
+        }
+
+        @keyframes marker-pulse-ring {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+
+        /* Leaflet 自訂 marker popup */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+        }
+
+        .leaflet-popup-content {
+            margin: 10px 14px !important;
+            font-family: inherit !important;
+            font-size: 0.9rem !important;
+        }
+
+        .area-popup {
+            text-align: center;
+        }
+
+        .area-popup strong {
+            font-size: 1rem;
+            color: var(--primary-dark);
+        }
+
+        .area-popup .popup-desc {
+            color: #666;
+            font-size: 0.8rem;
+            margin-top: 4px;
+        }
+
+        .area-popup .popup-btn {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 6px 16px;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .area-popup .popup-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .map-loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            transition: opacity 0.5s ease;
+        }
+
+        .map-loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .map-loading-overlay .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #E0E0E0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .map-loading-overlay p {
+            color: var(--text);
+            font-size: 1rem;
+        }
+
+        .weather-card {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: var(--white);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            z-index: 100;
+            transition: transform 0.3s ease;
+            min-width: 250px;
+        }
+
+        .weather-card.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .weather-card h3 {
+            color: var(--primary-dark);
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .weather-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        .weather-item:last-child {
+            border-bottom: none;
+        }
+
+        .weather-icon {
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+
+        .weather-value {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .close-weather {
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            padding: 10px 25px;
+            border-radius: 10px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .weather-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .weather-loading .mini-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #E0E0E0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .weather-updated {
+            font-size: 0.7rem;
+            color: #999;
+            margin-top: 8px;
+        }
+
+        .weather-error {
+            color: #E53935;
+            font-size: 0.85rem;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .map-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+            padding: 0 10px;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, var(--accent) 0%, #FF8F00 100%);
+            color: var(--white);
+            border: none;
+            padding: 20px;
+            border-radius: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 8px 30px rgba(255, 111, 0, 0.4);
+            transition: all 0.3s;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(255, 111, 0, 0.5);
+        }
+
+        .generate-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--white);
+        }
+
+        .official-map-btn {
+            background: linear-gradient(135deg, #1565C0 0%, #1976D2 100%);
+            color: var(--white);
+            border: none;
+            padding: 18px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 8px 30px rgba(21, 101, 192, 0.4);
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .official-map-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(21, 101, 192, 0.5);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .button-group .generate-btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 16px;
+            font-size: 1rem;
+        }
+
+        .button-group .route-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            box-shadow: 0 8px 30px rgba(46, 125, 50, 0.4);
+        }
+
+        .button-group .route-btn:hover {
+            box-shadow: 0 12px 40px rgba(46, 125, 50, 0.5);
+        }
+
+        .button-group .hotel-btn {
+            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+            box-shadow: 0 8px 30px rgba(156, 39, 176, 0.4);
+        }
+
+        .button-group .hotel-btn:hover {
+            box-shadow: 0 12px 40px rgba(156, 39, 176, 0.5);
+        }
+
+        .hotel-btn {
+            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+            color: var(--white);
+            border: none;
+            padding: 14px 20px;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
+            transition: all 0.3s;
+            margin: 10px auto;
+            width: 100%;
+        }
+
+        .hotel-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(156, 39, 176, 0.5);
+        }
+
+        .official-map-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--white);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--white);
+            border-radius: 25px;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .modal-header h3 {
+            color: var(--primary-dark);
+            font-size: 1.5rem;
+        }
+
+        .modal-content {
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-btn.confirm {
+            background: var(--primary);
+            color: var(--white);
+        }
+
+        .modal-btn.cancel {
+            background: #E0E0E0;
+            color: #666;
+        }
+
+        /* Enhanced Redirect Modal */
+        .redirect-modal {
+            max-width: 480px;
+            text-align: center;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .return-btn-pulse {
+            animation: pulse 2s infinite;
+            padding: 18px;
+            font-size: 1.1rem;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.5); }
+            70% { box-shadow: 0 0 0 20px rgba(46, 125, 50, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(46, 125, 50, 0); }
+        }
+
+        /* Hotel Platform Grid */
+        .platform-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .platform-btn {
+            background: var(--background);
+            border: 2px solid #E0E0E0;
+            border-radius: 15px;
+            padding: 20px 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .platform-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+        .platform-btn:hover .platform-name {
+            color: var(--white);
+        }
+
+        .platform-icon {
+            font-size: 1.8rem;
+        }
+
+        .platform-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text);
+            text-align: center;
+        }
+
+        /* Itinerary Page */
+        .itinerary-page {
+            padding: 70px 15px 20px;
+        }
+
+        .itinerary-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .itinerary-header h2 {
+            color: var(--primary-dark);
+            font-size: 1.5rem;
+        }
+
+        .itinerary-header p {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .sdg-highlights {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .sdg-card {
+            flex: 1;
+            min-width: 140px;
+            background: var(--white);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .sdg-card.accessibility {
+            border-left: 4px solid var(--sdg-blue);
+        }
+
+        .sdg-card.eco {
+            border-left: 4px solid var(--sdg-green);
+        }
+
+        .sdg-card h4 {
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .sdg-card.accessibility h4 { color: var(--sdg-blue); }
+        .sdg-card.eco h4 { color: var(--sdg-green); }
+
+        .sdg-card p {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .co2-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--sdg-green);
+            color: var(--white);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-top: 8px;
+        }
+
+        /* Day Sections for Multi-Day Itinerary */
+        .day-section {
+            margin-bottom: 30px;
+        }
+        
+        .day-header {
+            background: linear-gradient(135deg, var(--primary), #1B5E20);
+            color: var(--white);
+            padding: 18px 22px;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .day-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .day-theme {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+        }
+        
+        .day-header + .timeline {
+            border-radius: 0 0 20px 20px;
+            margin-top: 0;
+        }
+        
+        .timeline {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .timeline-time {
+            min-width: 60px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        .timeline-content h4 {
+            color: var(--text);
+            margin-bottom: 5px;
+        }
+
+        .timeline-content p {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .timeline-walking {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--background);
+            color: var(--primary);
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+        .timeline-transport-bus {
+            display: inline-block;
+            background: #E3F2FD;
+            color: #1565C0;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-top: 8px;
+            border: 1px dashed #64B5F6;
+        }
+
+        .timeline-accessible {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #E3F2FD;
+            color: var(--sdg-blue);
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-top: 8px;
+            margin-left: 5px;
+        }
+
+        .new-plan-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--secondary) 0%, #26A69A 100%);
+            color: var(--white);
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .new-plan-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 137, 123, 0.4);
+        }
+
+        /* Flight Page */
+        .flight-page {
+            padding: 70px 15px 20px;
+            align-items: center;
+        }
+
+        .flight-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .flight-header h2 {
+            color: var(--primary-dark);
+            font-size: 1.6rem;
+        }
+
+        .flight-header p {
+            color: #666;
+            margin-top: 8px;
+            font-size: 0.95rem;
+        }
+
+        .flight-search-card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 25px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .flight-form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .flight-form-group {
+            flex: 1;
+        }
+
+        .flight-form-group .form-label {
+            margin-bottom: 8px;
+        }
+
+        .search-flights-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #1565C0 0%, #1976D2 100%);
+            color: var(--white);
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .search-flights-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(21, 101, 192, 0.4);
+        }
+
+        .search-flights-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .health-flight-tips {
+            background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+            border-radius: 15px;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--sdg-blue);
+        }
+
+        .health-flight-tips h4 {
+            color: #1565C0;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .health-flight-tips ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .health-flight-tips li {
+            padding: 8px 0;
+            color: #333;
+            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .health-flight-tips li:last-child {
+            border-bottom: none;
+        }
+
+        .health-flight-tips li::before {
+            content: "✓ ";
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .flight-recommendations {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+
+        .flight-recommendations h3 {
+            color: var(--primary-dark);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .flight-card {
+            background: var(--white);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--primary);
+            transition: all 0.3s;
+        }
+
+        .flight-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+
+        .flight-card.recommended {
+            border-left-color: var(--accent);
+            background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%);
+        }
+
+        .flight-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .flight-airline {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .flight-badge {
+            background: var(--accent);
+            color: var(--white);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .flight-route {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .flight-time {
+            text-align: center;
+        }
+
+        .flight-time .time {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .flight-time .code {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .flight-duration {
+            text-align: center;
+            flex: 1;
+            padding: 0 15px;
+        }
+
+        .flight-duration-line {
+            height: 2px;
+            background: #E0E0E0;
+            position: relative;
+            margin: 8px 0;
+        }
+
+        .flight-duration-line::before {
+            content: "✈️";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .flight-duration .duration {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .flight-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid #E0E0E0;
+        }
+
+        .flight-price {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .flight-price span {
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: #666;
+        }
+
+        .flight-features {
+            display: flex;
+            gap: 10px;
+        }
+
+        .flight-feature {
+            background: var(--background);
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: var(--text);
+        }
+
+        .flight-book-btn {
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .flight-book-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .flight-booking-section {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 25px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .flight-booking-section h3 {
+            color: var(--primary-dark);
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .flight-booking-section > p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .booking-platforms {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .booking-platform-btn {
+            background: var(--background);
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .booking-platform-btn:hover {
+            border-color: var(--primary);
+            background: var(--white);
+        }
+
+        .booking-platform-btn .platform-icon {
+            font-size: 1.3rem;
+        }
+
+        .flight-actions {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .flight-card.eco-friendly {
+            border-left-color: var(--sdg-green);
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+        }
+
+        .eco-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--sdg-green);
+            color: var(--white);
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+
+        /* Hotel Page */
+        .hotel-page {
+            padding: 70px 15px 20px;
+            align-items: center;
+        }
+
+        .hotel-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .hotel-header h2 {
+            color: #7B1FA2;
+            font-size: 1.6rem;
+        }
+
+        .hotel-header p {
+            color: #666;
+            margin-top: 8px;
+            font-size: 0.95rem;
+        }
+
+        .hotel-search-card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 25px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .hotel-form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .hotel-form-group {
+            flex: 1;
+        }
+
+        .hotel-form-group .form-label {
+            margin-bottom: 8px;
+        }
+
+        .search-hotels-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+            color: var(--white);
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .search-hotels-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(156, 39, 176, 0.4);
+        }
+
+        .search-hotels-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .health-hotel-tips {
+            background: linear-gradient(135deg, #F3E5F5 0%, #E1BEE7 100%);
+            border-radius: 15px;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            border-left: 4px solid #9C27B0;
+        }
+
+        .health-hotel-tips h4 {
+            color: #7B1FA2;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+
+        .health-hotel-tips ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .health-hotel-tips li {
+            padding: 8px 0;
+            color: #333;
+            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .health-hotel-tips li:last-child {
+            border-bottom: none;
+        }
+
+        .health-hotel-tips li::before {
+            content: "✓ ";
+            color: #9C27B0;
+            font-weight: bold;
+        }
+
+        .hotel-recommendations {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+
+        .hotel-recommendations h3 {
+            color: #7B1FA2;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .hotel-card {
+            background: var(--white);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-left: 4px solid #9C27B0;
+            transition: all 0.3s;
+        }
+
+        .hotel-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+
+        .hotel-card.recommended {
+            border-left-color: #FF9800;
+            background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%);
+        }
+
+        .hotel-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .hotel-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text);
+        }
+
+        .hotel-star {
+            color: #FF9800;
+            font-size: 0.9rem;
+        }
+
+        .hotel-badge {
+            background: #FF9800;
+            color: var(--white);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .hotel-location {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+
+        .hotel-amenities {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .hotel-amenity {
+            background: var(--background);
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: var(--text);
+        }
+
+        .hotel-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid #E0E0E0;
+        }
+
+        .hotel-price {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #9C27B0;
+        }
+
+        .hotel-price span {
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: #666;
+        }
+
+        .hotel-book-btn {
+            background: #9C27B0;
+            color: var(--white);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .hotel-book-btn:hover {
+            background: #7B1FA2;
+        }
+
+        .hotel-booking-section {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 25px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .hotel-booking-section h3 {
+            color: #7B1FA2;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .hotel-booking-section > p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .hotel-actions {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .hotel-card.eco-friendly {
+            border-left-color: var(--sdg-green);
+            background: linear-gradient(135deg, #E8F5E9 0%, #C8E6C9 100%);
+        }
+
+        .hotel-accessibility-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #E3F2FD;
+            color: #1565C0;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #E0E0E0;
+            z-index: 1001;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+            transition: width 0.3s ease;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .welcome-title { font-size: 2.2rem; }
+            .welcome-subtitle { font-size: 1.2rem; }
+            .form-card { padding: 30px 20px; }
+            .form-title { font-size: 1.5rem; }
+            .macau-map { height: 350px; }
+            .official-map-iframe { height: 350px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    
+    <div class="language-selector visible" id="languageSelector">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        <span id="currentLangName">繁體中文</span>
+        <div class="language-dropdown" id="languageDropdown">
+            <div class="language-option active" data-lang="zh-TW">繁體中文</div>
+            <div class="language-option" data-lang="zh-CN">简体中文</div>
+            <div class="language-option" data-lang="en">English</div>
+            <div class="language-option" data-lang="ko">한국어</div>
+            <div class="language-option" data-lang="ja">日本語</div>
+            <div class="language-option" data-lang="pt">Português</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Welcome Page -->
+        <div class="page welcome-page active" id="page-welcome">
+            <svg class="welcome-logo" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="#2E7D32"/>
+                <path d="M30 55 Q50 25 70 55 Q50 85 30 55" fill="#4CAF50"/>
+                <circle cx="50" cy="40" r="12" fill="#81C784"/>
+                <!-- Green leaf -->
+                <path d="M75 25 Q85 15 90 25 Q85 35 75 25" fill="#4CAF50" opacity="0.9"/>
+                <path d="M78 27 L88 27" stroke="#2E7D32" stroke-width="1.5"/>
+            </svg>
+            <h1 class="welcome-title" data-i18n="welcome_title">健康旅行</h1>
+            <p class="welcome-subtitle" data-i18n="welcome_subtitle">我在</p>
+            <button class="start-btn" onclick="goToPage('page-age')" data-i18n="start_btn">開始</button>
+            <button class="skip-btn" onclick="skipToMap()" data-i18n="skip_form">跳過填寫資料</button>
+            <p class="privacy-note" data-i18n="privacy_note">🔒 您的資料僅用於提供個人化旅遊建議，我們不會將您的資料用於其他用途</p>
+            
+            <div class="sdg-badge">
+                <h4>🌱 SDG 目標</h4>
+                <p>減少不平等 💙 氣候行動 🌿<br>讓所有人都能享受旅行的樂趣</p>
+            </div>
+        </div>
+
+        <!-- Age Page -->
+        <div class="page form-page" id="page-age">
+            <div class="form-card">
+                <h2 class="form-title" data-i18n="age_title">請告訴我您的年齡</h2>
+                <div class="form-group">
+                    <input type="number" class="form-input" id="ageInput" min="1" max="120" placeholder="輸入年齡" data-i18n-placeholder="age_placeholder">
+                </div>
+                <button class="next-btn" onclick="saveAge()" data-i18n="next">下一步</button>
+                <button class="back-btn" onclick="goToPage('page-welcome')" data-i18n="back">返回</button>
+            </div>
+        </div>
+
+        <!-- Gender Page -->
+        <div class="page form-page" id="page-gender">
+            <div class="form-card">
+                <h2 class="form-title" data-i18n="gender_title">您的性別是？</h2>
+                <div class="form-group">
+                    <div class="radio-group" id="genderGroup">
+                        <label class="radio-item" data-value="male">
+                            <input type="radio" name="gender" value="male">
+                            <span>👨</span> <span data-i18n="male">男性</span>
+                        </label>
+                        <label class="radio-item" data-value="female">
+                            <input type="radio" name="gender" value="female">
+                            <span>👩</span> <span data-i18n="female">女性</span>
+                        </label>
+                        <label class="radio-item" data-value="other">
+                            <input type="radio" name="gender" value="other">
+                            <span>🧑</span> <span data-i18n="other">其他</span>
+                        </label>
+                    </div>
+                </div>
+                <button class="next-btn" onclick="saveGender()" data-i18n="next">下一步</button>
+                <button class="back-btn" onclick="goToPage('page-age')" data-i18n="back">返回</button>
+            </div>
+        </div>
+
+        <!-- Menstruation Page -->
+        <div class="page form-page" id="page-menstruation">
+            <div class="form-card">
+                <h2 class="form-title" data-i18n="menstruation_title">請問您是否有月經？</h2>
+                <div class="form-group">
+                    <div class="radio-group">
+                        <label class="radio-item" data-value="yes" onclick="selectRadio(this, 'menstruation')">
+                            <span data-i18n="yes">是</span>
+                        </label>
+                        <label class="radio-item" data-value="no" onclick="selectRadio(this, 'menstruation')">
+                            <span data-i18n="no">否</span>
+                        </label>
+                    </div>
+                </div>
+                <button class="next-btn" onclick="goToPage('page-disease')" data-i18n="next">下一步</button>
+                <button class="back-btn" onclick="goToPage('page-gender')" data-i18n="back">返回</button>
+            </div>
+        </div>
+
+        <!-- Disease Page -->
+        <div class="page form-page" id="page-disease">
+            <div class="form-card">
+                <h2 class="form-title" data-i18n="disease_title">請問您是否有慢性疾病？</h2>
+                <div class="form-group">
+                    <div class="radio-group">
+                        <label class="radio-item" data-value="no" onclick="selectRadio(this, 'disease')">
+                            <span data-i18n="no_disease">沒有</span>
+                        </label>
+                        <label class="radio-item" data-value="yes" onclick="selectRadio(this, 'disease'); showDiseaseTypes()">
+                            <span data-i18n="yes_disease">有</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="diseaseTypes" style="display: none;">
+                    <label class="form-label" data-i18n="disease_type_label">請選擇疾病類型（可多選）：</label>
+                    <div class="checkbox-group" id="diseaseCheckboxes">
+                        <label class="checkbox-item" data-value="heart" onclick="toggleCheckbox(this)">
+                            <span>❤️</span> <span data-i18n="heart_disease">心臟疾病</span>
+                        </label>
+                        <label class="checkbox-item" data-value="diabetes" onclick="toggleCheckbox(this)">
+                            <span>🩸</span> <span data-i18n="diabetes">糖尿病</span>
+                        </label>
+                        <label class="checkbox-item" data-value="respiratory" onclick="toggleCheckbox(this)">
+                            <span>🫁</span> <span data-i18n="respiratory">呼吸系統疾病</span>
+                        </label>
+                        <label class="checkbox-item" data-value="mobility" onclick="toggleCheckbox(this)">
+                            <span>🦽</span> <span data-i18n="mobility">行動不便/殘疾</span>
+                        </label>
+                        <label class="checkbox-item" data-value="hypertension" onclick="toggleCheckbox(this)">
+                            <span>💓</span> <span data-i18n="hypertension">高血壓</span>
+                        </label>
+                        <label class="checkbox-item" data-value="arthritis" onclick="toggleCheckbox(this)">
+                            <span>🦴</span> <span data-i18n="arthritis">關節炎</span>
+                        </label>
+                    </div>
+                </div>
+                <button class="next-btn" onclick="saveDisease()" data-i18n="next">下一步</button>
+                <button class="back-btn" onclick="goToPage('page-gender')" data-i18n="back">返回</button>
+            </div>
+        </div>
+
+        <!-- Map Page -->
+        <div class="page map-page" id="page-map">
+            <div class="map-header">
+                <h2 data-i18n="map_title">🗺️ 澳門地圖</h2>
+                <p data-i18n="map_hint">點擊區域查看天氣資訊</p>
+            </div>
+            
+            <div class="map-container">
+                <div class="macau-map" id="macauMap">
+                    <!-- Leaflet 地圖容器 -->
+                    <div id="leafletMap" style="width:100%; height:100%; z-index:1;"></div>
+                    
+                    <!-- 載入中提示 -->
+                    <div class="map-loading-overlay" id="mapLoading">
+                        <div class="spinner"></div>
+                        <p data-i18n="loading_map">正在載入澳門地圖...</p>
+                    </div>
+                    
+                    <!-- 天氣卡片 -->
+                    <div class="weather-card" id="weatherCard">
+                        <h3 id="weatherLocation">地區名稱</h3>
+                        <div class="weather-loading" id="weatherLoading">
+                            <div class="mini-spinner"></div>
+                            <span>獲取實時天氣中...</span>
+                        </div>
+                        <div id="weatherData" style="display:none;">
+                            <div class="weather-item">
+                                <span class="weather-icon">🌡️</span>
+                                <span data-i18n="temperature">溫度</span>
+                                <span class="weather-value" id="weatherTemp">--°C</span>
+                            </div>
+                            <div class="weather-item">
+                                <span class="weather-icon">💧</span>
+                                <span data-i18n="humidity">濕度</span>
+                                <span class="weather-value" id="weatherHumidity">--%</span>
+                            </div>
+                            <div class="weather-item">
+                                <span class="weather-icon">🌬️</span>
+                                <span data-i18n="wind">風速</span>
+                                <span class="weather-value" id="weatherWind">-- km/h</span>
+                            </div>
+                        </div>
+                        <div class="weather-error" id="weatherError" style="display:none;"></div>
+                        <div class="weather-updated" id="weatherUpdated"></div>
+                        <button class="close-weather" onclick="closeWeather()" data-i18n="close">關閉</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="map-actions">
+                <!-- 澳門官方地圖按鈕 -->
+                <button class="official-map-btn" onclick="openOfficialMap()">
+                    <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+                    <span data-i18n="open_official_map">開啟澳門官方地圖</span>
+                </button>
+                
+                <div class="button-group">
+                    <button class="generate-btn" onclick="goToPage('page-flights')">
+                        <svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+                        <span data-i18n="search_flights">搜尋航班</span>
+                    </button>
+                    
+                    <button class="generate-btn route-btn" onclick="generateItineraryAndGo()">
+                        <svg viewBox="0 0 24 24"><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+                        <span data-i18n="generate_route">生成路線</span>
+                    </button>
+                    
+                    <button class="generate-btn hotel-btn" onclick="searchHotels()">
+                        <svg viewBox="0 0 24 24"><path d="M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2v-9c0-2.21-1.79-4-4-4z"/></svg>
+                        <span data-i18n="search_hotels">搜尋酒店</span>
+                    </button>
+                </div>
+            </div>
+            
+            <button class="back-btn" style="margin-top: 15px;" onclick="goToPage('page-disease')" data-i18n="back">返回</button>
+        </div>
+
+        <!-- Flight Search Page -->
+        <div class="page flight-page" id="page-flights">
+            <div class="flight-header">
+                <h2 data-i18n="flight_title">✈️ 智能機票推薦</h2>
+                <p data-i18n="flight_subtitle">根據您的健康狀況推薦最佳航班</p>
+            </div>
+            
+            <!-- 航班搜索表單 -->
+            <div class="flight-search-card">
+                <div class="flight-form-row">
+                    <div class="flight-form-group">
+                        <label class="form-label" data-i18n="from">出發地</label>
+                        <select class="form-select" id="departureCity">
+                            <option value="HKG">香港國際機場 (HKG)</option>
+                            <option value="MFM">澳門國際機場 (MFM)</option>
+                            <option value="CAN">廣州白雲國際機場 (CAN)</option>
+                            <option value="SZX">深圳寶安國際機場 (SZX)</option>
+                            <option value="PVG">上海浦東國際機場 (PVG)</option>
+                            <option value="PEK">北京首都國際機場 (PEK)</option>
+                            <option value="TPE">台灣桃園國際機場 (TPE)</option>
+                        </select>
+                    </div>
+                    <div class="flight-form-group">
+                        <label class="form-label" data-i18n="to">目的地</label>
+                        <select class="form-select" id="arrivalCity">
+                            <option value="MFM">澳門國際機場 (MFM)</option>
+                            <option value="HKG">香港國際機場 (HKG)</option>
+                            <option value="NRT">東京成田國際機場 (NRT)</option>
+                            <option value="ICN">首爾仁川國際機場 (ICN)</option>
+                            <option value="SIN">新加坡樟宜國際機場 (SIN)</option>
+                            <option value="BKK">曼谷素萬那普國際機場 (BKK)</option>
+                            <option value="LIS">里斯本國際機場 (LIS)</option>
+                            <option value="SYD">悉尼金斯ford國際機場 (SYD)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="flight-form-row">
+                    <div class="flight-form-group">
+                        <label class="form-label" data-i18n="depart_date">出發日期</label>
+                        <input type="date" class="form-input" id="flightDate">
+                    </div>
+                    <div class="flight-form-group">
+                        <label class="form-label" data-i18n="passengers">乘客數</label>
+                        <select class="form-select" id="passengerCount">
+                            <option value="1">1 位</option>
+                            <option value="2">2 位</option>
+                            <option value="3">3 位</option>
+                            <option value="4">4 位</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="search-flights-btn" onclick="searchFlights()">
+                    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="white"/></svg>
+                    <span data-i18n="search_flights">搜尋航班</span>
+                </button>
+            </div>
+            
+            <!-- 健康建議提示 -->
+            <div class="health-flight-tips" id="healthFlightTips">
+                <h4>🌿 您的健康飛行建議</h4>
+                <div id="healthTipsContent"></div>
+            </div>
+            
+            <!-- 航班推薦列表 -->
+            <div class="flight-recommendations" id="flightRecommendations">
+                <h3 data-i18n="recommended_flights">為您推薦的航班</h3>
+                <div id="flightsList"></div>
+            </div>
+            
+            <!-- 嵌入航班預訂網站 -->
+            <div class="flight-booking-section">
+                <h3 data-i18n="book_flights">直接預訂機票</h3>
+                <p data-i18n="booking_platforms">選擇您偏好的機票預訂平台：</p>
+                <div class="booking-platforms">
+                    <button class="booking-platform-btn" onclick="openBookingSite('skyscanner')">
+                        <span class="platform-icon">🔍</span>
+                        <span>Skyscanner</span>
+                    </button>
+                    <button class="booking-platform-btn" onclick="openBookingSite('kayak')">
+                        <span class="platform-icon">🚗</span>
+                        <span>Kayak</span>
+                    </button>
+                    <button class="booking-platform-btn" onclick="openBookingSite('expedia')">
+                        <span class="platform-icon">🌐</span>
+                        <span>Expedia</span>
+                    </button>
+                    <button class="booking-platform-btn" onclick="openBookingSite('trip')">
+                        <span class="platform-icon">✈️</span>
+                        <span>攜程 Trip.com</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flight-actions">
+                <button class="next-btn" onclick="goToPage('page-itinerary')" data-i18n="continue_to_itinerary">繼續查看行程</button>
+                <button class="back-btn" onclick="goToPage('page-map')" data-i18n="back">返回</button>
+            </div>
+        </div>
+
+        <!-- Hotel Search Page -->
+        <div class="page hotel-page" id="page-hotels">
+            <div class="hotel-header">
+                <h2 data-i18n="hotel_title">🏨 智能酒店推薦</h2>
+                <p data-i18n="hotel_subtitle">根據您的健康需求推薦最佳住宿</p>
+            </div>
+            
+            <!-- 酒店搜索表單 -->
+            <div class="hotel-search-card">
+                <div class="hotel-form-row">
+                    <div class="hotel-form-group">
+                        <label class="form-label" data-i18n="hotel_location">住宿地區</label>
+                        <select class="form-select" id="hotelLocation">
+                            <option value="macau-peninsula">澳門半島</option>
+                            <option value="taipa">氹仔</option>
+                            <option value="cotai">路氹城</option>
+                            <option value="coloane">路環</option>
+                        </select>
+                    </div>
+                    <div class="hotel-form-group">
+                        <label class="form-label" data-i18n="hotel_type">住宿類型</label>
+                        <select class="form-select" id="hotelType">
+                            <option value="all" data-i18n="hotel_all">所有類型</option>
+                            <option value="luxury" data-i18n="hotel_luxury">豪華酒店</option>
+                            <option value="resort" data-i18n="hotel_resort">度假村</option>
+                            <option value="boutique" data-i18n="hotel_boutique">精品酒店</option>
+                            <option value="budget" data-i18n="hotel_budget">經濟型</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="hotel-form-row">
+                    <div class="hotel-form-group">
+                        <label class="form-label" data-i18n="check_in">入住日期</label>
+                        <input type="date" class="form-input" id="hotelCheckIn">
+                    </div>
+                    <div class="hotel-form-group">
+                        <label class="form-label" data-i18n="check_out">退房日期</label>
+                        <input type="date" class="form-input" id="hotelCheckOut">
+                    </div>
+                </div>
+                
+                <div class="hotel-form-row">
+                    <div class="hotel-form-group">
+                        <label class="form-label" data-i18n="hotel_guests">住客人數</label>
+                        <select class="form-select" id="hotelGuests">
+                            <option value="1">1 位</option>
+                            <option value="2">2 位</option>
+                            <option value="3">3 位</option>
+                            <option value="4">4 位</option>
+                            <option value="5">5+ 位</option>
+                        </select>
+                    </div>
+                    <div class="hotel-form-group">
+                        <label class="form-label" data-i18n="hotel_rooms">房間數</label>
+                        <select class="form-select" id="hotelRooms">
+                            <option value="1">1 間</option>
+                            <option value="2">2 間</option>
+                            <option value="3">3 間</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="search-hotels-btn" onclick="searchHotelsPage()">
+                    <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="white"/></svg>
+                    <span data-i18n="search_hotels_btn">搜尋酒店</span>
+                </button>
+            </div>
+            
+            <!-- 健康住宿建議 -->
+            <div class="health-hotel-tips" id="healthHotelTips">
+                <h4>🌿 您的健康住宿建議</h4>
+                <div id="healthHotelTipsContent"></div>
+            </div>
+            
+            <!-- 酒店推薦列表 -->
+            <div class="hotel-recommendations" id="hotelRecommendations">
+                <h3 data-i18n="recommended_hotels">為您推薦的酒店</h3>
+                <div id="hotelsList"></div>
+            </div>
+            
+            <!-- 直接預訂平台 -->
+            <div class="hotel-booking-section">
+                <h3 data-i18n="book_hotels">直接預訂酒店</h3>
+                <p data-i18n="hotel_booking_platforms">選擇您偏好的酒店預訂平台：</p>
+                <div class="booking-platforms">
+                    <button class="booking-platform-btn" onclick="openHotelPlatform('booking')">
+                        <span class="platform-icon">🏨</span>
+                        <span>Booking.com</span>
+                    </button>
+                    <button class="booking-platform-btn" onclick="openHotelPlatform('agoda')">
+                        <span class="platform-icon">🔍</span>
+                        <span>Agoda</span>
+                    </button>
+                    <button class="booking-platform-btn" onclick="openHotelPlatform('expedia')">
+                        <span class="platform-icon">✈️</span>
+                        <span>Expedia</span>
+                    </button>
+                    <button class="booking-platform-btn" onclick="openHotelPlatform('trip')">
+                        <span class="platform-icon">🚗</span>
+                        <span>Trip.com</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="hotel-actions">
+                <button class="next-btn" onclick="goToPage('page-itinerary')" data-i18n="continue_to_itinerary">繼續查看行程</button>
+                <button class="back-btn" onclick="goToPage('page-map')" data-i18n="back">返回</button>
+            </div>
+        </div>
+
+        <!-- Itinerary Page -->
+        <div class="page itinerary-page" id="page-itinerary">
+            <div class="itinerary-header">
+                <h2 data-i18n="itinerary_title">🌟 您的健康旅行路線</h2>
+                <p data-i18n="itinerary_subtitle">專為您量身定制</p>
+            </div>
+            
+            <div class="sdg-highlights">
+                <div class="sdg-card accessibility">
+                    <h4>♿ 無障礙路線</h4>
+                    <p data-i18n="accessibility_desc">已為您規劃無障礙通道和設施</p>
+                </div>
+                <div class="sdg-card eco">
+                    <h4>🌿 環保出行</h4>
+                    <p data-i18n="eco_desc">優先步行，減少碳排放</p>
+                    <div class="co2-badge" id="co2Badge">
+                        <span>🌱</span>
+                        <span data-i18n="co2_saved">減碳 2.5kg CO₂</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="timeline" id="itineraryTimeline">
+                <!-- Generated itinerary items will be inserted here -->
+            </div>
+            
+            <button class="new-plan-btn" onclick="showTripModal()" data-i18n="new_plan">重新規劃</button>
+            <button class="hotel-btn" onclick="searchHotels()" data-i18n="search_hotels">🏨 搜尋酒店</button>
+            <button class="back-btn" onclick="goToPage('page-map')" data-i18n="back">返回</button>
+        </div>
+    </div>
+
+    <!-- Trip Settings Modal -->
+    <div class="modal-overlay" id="tripModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 data-i18n="trip_settings">旅行設定</h3>
+            </div>
+            
+            <div class="modal-content">
+                <!-- 起始點和目的地 -->
+                <div class="form-group">
+                    <label class="form-label" data-i18n="route_selection">選擇路線</label>
+                    <div class="flight-form-row" style="margin-bottom: 10px;">
+                        <div class="flight-form-group">
+                            <select class="form-select" id="startLocation">
+                                <option value="" data-i18n="select_start">選擇起始點</option>
+                                <optgroup label="🇲🇴 澳門本地">
+                                <option value="macau-peninsula" data-i18n="macau_peninsula">澳門半島</option>
+                                <option value="taipa" data-i18n="taipa">氹仔</option>
+                                <option value="coloane" data-i18n="coloane">路環</option>
+                                <option value="cotai" data-i18n="cotai">路氹城</option>
+                                <option value="macau-airport" data-i18n="macau_airport">澳門國際機場</option>
+                                </optgroup>
+                                <optgroup label="🌏 中國及周邊">
+                                <option value="hong-kong" data-i18n="hong_kong">香港</option>
+                                <option value="zhuhai" data-i18n="zhuhai">珠海</option>
+                                <option value="shenzhen">深圳</option>
+                                <option value="guangzhou">廣州</option>
+                                <option value="beijing">北京</option>
+                                <option value="shanghai">上海</option>
+                                <option value="taipei">台北</option>
+                                </optgroup>
+                                <optgroup label="🗼 亞洲">
+                                <option value="tokyo">東京</option>
+                                <option value="seoul">首爾</option>
+                                <option value="singapore">新加坡</option>
+                                <option value="bangkok">曼谷</option>
+                                <option value="kuala-lumpur">吉隆坡</option>
+                                <option value="manila">馬尼拉</option>
+                                </optgroup>
+                                <optgroup label="✈️ 國際">
+                                <option value="lisbon">里斯本</option>
+                                <option value="sydney">悉尼</option>
+                                <option value="london">倫敦</option>
+                                <option value="new-york">紐約</option>
+                                <option value="paris">巴黎</option>
+                                </optgroup>
+                                <option value="other" data-i18n="other_location">其他（自行選擇）</option>
+                            </select>
+                        </div>
+                        <div class="flight-form-group">
+                            <select class="form-select" id="destination">
+                                <option value="" data-i18n="select_destination">選擇目的地</option>
+                                <option value="macau-peninsula" data-i18n="macau_peninsula">澳門半島</option>
+                                <option value="taipa" data-i18n="taipa">氹仔</option>
+                                <option value="coloane" data-i18n="coloane">路環</option>
+                                <option value="cotai" data-i18n="cotai">路氹城</option>
+                                <option value="cotai-strip" data-i18n="cotai_strip">路氹金光大道</option>
+                                <option value="macau-tower" data-i18n="macau_tower">澳門旅遊塔</option>
+                                <option value="ruins-paulo" data-i18n="ruins_paulo">大三巴牌坊</option>
+                                <option value="other" data-i18n="other_location">其他（自行選擇）</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 旅行日期範圍 -->
+                <div class="form-group">
+                    <label class="form-label" data-i18n="travel_period">選擇旅行期間</label>
+                    <div class="flight-form-row">
+                        <div class="flight-form-group">
+                            <input type="date" class="form-input" id="travelDate" placeholder="開始日期">
+                        </div>
+                        <div class="flight-form-group">
+                            <input type="date" class="form-input" id="travelEndDate" placeholder="結束日期">
+                        </div>
+                    </div>
+                    <p style="font-size: 0.85rem; color: #666; margin-top: 5px;" id="tripDuration"></p>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" data-i18n="companions">和誰一起去？（可多選）</label>
+                    <div class="checkbox-group" id="companionCheckboxes">
+                        <label class="checkbox-item" data-value="alone" onclick="toggleCheckbox(this)" id="companion-alone">
+                            <span data-i18n="alone">自己一人</span>
+                        </label>
+                        <label class="checkbox-item" data-value="family" onclick="toggleCheckbox(this)">
+                            <span>👨‍👩‍👧</span> <span data-i18n="family">家人</span>
+                        </label>
+                        <label class="checkbox-item" data-value="friends" onclick="toggleCheckbox(this)">
+                            <span>👫</span> <span data-i18n="friends">朋友</span>
+                        </label>
+                        <label class="checkbox-item" data-value="partner" onclick="toggleCheckbox(this)">
+                            <span>💑</span> <span data-i18n="partner">伴侶</span>
+                        </label>
+                        <label class="checkbox-item" data-value="elderly" onclick="toggleCheckbox(this)">
+                            <span>👴👵</span> <span data-i18n="elderly">長者</span>
+                        </label>
+                        <label class="checkbox-item" data-value="kids" onclick="toggleCheckbox(this)">
+                            <span>👶</span> <span data-i18n="kids">小朋友</span>
+                        </label>
+                        <label class="checkbox-item" data-value="disabled" onclick="toggleCheckbox(this)">
+                            <span>♿</span> <span data-i18n="disabled">行動不便者</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" data-i18n="intensity">旅行強度</label>
+                    <div class="radio-group" id="intensityGroup">
+                        <label class="radio-item" data-value="light" onclick="selectRadio(this, 'intensity')">
+                            <span>🧘</span> <span data-i18n="light">輕鬆</span>
+                        </label>
+                        <label class="radio-item" data-value="moderate" onclick="selectRadio(this, 'intensity')">
+                            <span>🚶</span> <span data-i18n="moderate">適中</span>
+                        </label>
+                        <label class="radio-item" data-value="active" onclick="selectRadio(this, 'intensity')">
+                            <span>🏃</span> <span data-i18n="active">活力</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn cancel" onclick="closeTripModal()" data-i18n="cancel">取消</button>
+                <button class="modal-btn confirm" onclick="generateItinerary()" data-i18n="generate">生成路線</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Redirect Modal -->
+    <div class="modal-overlay" id="externalRedirectModal">
+        <div class="modal redirect-modal">
+            <div class="modal-header" style="background: linear-gradient(135deg, #FFF3E0, #FFE0B2);">
+                <span style="font-size: 2rem; display: block;">⬅️</span>
+                <h3 data-i18n="external_redirect_title" style="color: #E65100;">已開啟外部網站</h3>
+            </div>
+            <div class="modal-content" style="text-align: center; padding: 20px;">
+                <p style="margin-bottom: 10px; color: #333; font-size: 1.2rem; font-weight: 600;" data-i18n="external_redirect_hint">
+                    外部網站已在新標籤頁開啟
+                </p>
+                <div style="background: #E8F5E9; border-radius: 15px; padding: 20px; margin: 15px 0; border: 2px dashed #4CAF50;">
+                    <p style="color: #2E7D32; font-size: 1.1rem; font-weight: 700; margin-bottom: 10px;">
+                        💡 如何回到這裡？
+                    </p>
+                    <p style="color: #333; font-size: 1rem; line-height: 1.6;" data-i18n="external_redirect_return">
+                        👉 點擊瀏覽器上方的 <strong>「健康旅行」</strong> 標籤頁<br>
+                        或 👉 關閉外部網站的分頁即可
+                    </p>
+                </div>
+            </div>
+            <div class="modal-actions" style="padding: 20px; flex-direction: column; gap: 10px;">
+                <button class="modal-btn confirm return-btn-pulse" onclick="closeExternalRedirectModal()" data-i18n="return_app" style="width: 100%; font-size: 1.2rem; padding: 16px;">
+                    ✅  返回應用程式（繼續使用）
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Return Banner -->
+    <div id="returnBanner" style="display: none; position: fixed; top: 0; left: 0; right: 0; background: linear-gradient(135deg, #FFF3E0, #FFE0B2); color: #E65100; text-align: center; padding: 12px; z-index: 9999; border-bottom: 3px solid #FF9800; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        <span style="font-size: 1.1rem; font-weight: 700;">👈 歡迎回來！點擊下方按鈕繼續使用健康旅行 → </span>
+        <button onclick="closeExternalRedirectModal();" style="background: #2E7D32; color: white; border: none; padding: 8px 20px; border-radius: 20px; font-weight: 700; cursor: pointer; margin-left: 10px; font-size: 1rem;">返回應用程式</button>
+    </div>
+
+    <!-- Hotel Platform Selection Modal -->
+    <div class="modal-overlay" id="hotelPlatformModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 data-i18n="hotel_platform_title">🏨 選擇酒店預訂平台</h3>
+            </div>
+            <div class="modal-content">
+                <p style="text-align: center; color: #666; margin-bottom: 20px;" data-i18n="hotel_platform_hint">選擇您偏好的酒店預訂網站</p>
+                <div class="platform-grid">
+                    <button class="platform-btn" onclick="openHotelPlatform('booking')">
+                        <span class="platform-icon">🏨</span>
+                        <span class="platform-name">Booking.com</span>
+                    </button>
+                    <button class="platform-btn" onclick="openHotelPlatform('agoda')">
+                        <span class="platform-icon">🔍</span>
+                        <span class="platform-name">Agoda</span>
+                    </button>
+                    <button class="platform-btn" onclick="openHotelPlatform('expedia')">
+                        <span class="platform-icon">✈️</span>
+                        <span class="platform-name">Expedia</span>
+                    </button>
+                    <button class="platform-btn" onclick="openHotelPlatform('hotels')">
+                        <span class="platform-icon">🛎️</span>
+                        <span class="platform-name">Hotels.com</span>
+                    </button>
+                    <button class="platform-btn" onclick="openHotelPlatform('trip')">
+                        <span class="platform-icon">🚗</span>
+                        <span class="platform-name">Trip.com</span>
+                    </button>
+                    <button class="platform-btn" onclick="openHotelPlatform('airbnb')">
+                        <span class="platform-icon">🏠</span>
+                        <span class="platform-name">Airbnb</span>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" onclick="closeHotelPlatformModal()" data-i18n="cancel">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // User Profile Data
+        let userProfile = {
+            age: null,
+            gender: null,
+            hasMenstruation: null,
+            hasDisease: null,
+            diseases: [],
+            companions: [],
+            intensity: 'moderate',
+            travelDate: null,
+            travelEndDate: null,
+            startLocation: null,
+            destination: null
+        };
+
+        // Current Language
+        let currentLang = 'zh-TW';
+
+        // Translations
+        const translations = {
+            'zh-TW': {
+                welcome_title: '健康旅行',
+                welcome_subtitle: '我在',
+                start_btn: '開始',
+                age_title: '請告訴我您的年齡',
+                age_placeholder: '輸入年齡',
+                gender_title: '您的性別是？',
+                male: '男性',
+                female: '女性',
+                other: '其他',
+                menstruation_title: '請問您是否有月經？',
+                yes: '是',
+                no: '否',
+                disease_title: '請問您是否有慢性疾病？',
+                no_disease: '沒有',
+                yes_disease: '有',
+                disease_type_label: '請選擇疾病類型（可多選）：',
+                heart_disease: '心臟疾病',
+                diabetes: '糖尿病',
+                respiratory: '呼吸系統疾病',
+                mobility: '行動不便/殘疾',
+                hypertension: '高血壓',
+                arthritis: '關節炎',
+                map_title: '🗺️ 澳門地圖',
+                map_hint: '點擊區域查看天氣資訊',
+                penha: '澳門半島',
+                taipa: '氹仔',
+                coloane: '路環',
+                cotai: '路氹城',
+                temperature: '溫度',
+                humidity: '濕度',
+                wind: '風速',
+                close: '關閉',
+                generate_route: '一鍵生成旅行路線',
+                itinerary_title: '🌟 您的健康旅行路線',
+                itinerary_subtitle: '專為您量身定制',
+                accessibility_desc: '已為您規劃無障礙通道和設施',
+                eco_desc: '優先步行，減少碳排放',
+                co2_saved: '減碳 2.5kg CO₂',
+                trip_settings: '旅行設定',
+                travel_date: '選擇旅行日期',
+                travel_period: '選擇旅行期間',
+                route_selection: '選擇路線',
+                select_start: '選擇起始點',
+                select_destination: '選擇目的地',
+                group_macau_local: '🇲🇴 澳門本地',
+                group_china: '🌏 中國及周邊',
+                group_asia: '🗼 亞洲',
+                group_international: '✈️ 國際',
+                macau_peninsula: '澳門半島',
+                taipa: '氹仔',
+                coloane: '路環',
+                cotai: '路氹城',
+                cotai_strip: '路氹金光大道',
+                macau_tower: '澳門旅遊塔',
+                ruins_paulo: '大三巴牌坊',
+                macau_airport: '澳門國際機場',
+                hong_kong: '香港',
+                zhuhai: '珠海',
+                other_location: '其他（自行選擇）',
+                select_other_hint: '請在地圖上選擇位置',
+                trip_duration: '共 {days} 天',
+                companions: '和誰一起去？（可多選）',
+                alone: '自己一人',
+                family: '家人',
+                friends: '朋友',
+                partner: '伴侶',
+                elderly: '長者',
+                kids: '小朋友',
+                disabled: '行動不便者',
+                intensity: '旅行強度',
+                light: '輕鬆',
+                moderate: '適中',
+                active: '活力',
+                cancel: '取消',
+                generate: '生成路線',
+                new_plan: '重新規劃',
+                back: '返回',
+                skip_form: '跳過填寫資料',
+                privacy_note: '🔒 您的資料僅用於提供個人化旅遊建議，我們不會將您的資料用於其他用途',
+                search_hotels: '🏨 搜尋酒店',
+                external_redirect_title: '已開啟外部網站',
+                external_redirect_hint: '外部網站已在新標籤頁開啟',
+                external_redirect_return: '關閉外部分頁，或點擊瀏覽器上方標籤切換回到「健康旅行」頁面即可繼續使用',
+                return_app: '返回應用程式',
+                hotel_platform_title: '🏨 選擇酒店預訂平台',
+                hotel_platform_hint: '選擇您偏好的酒店預訂網站',
+                hotel_title: '🏨 智能酒店推薦',
+                hotel_subtitle: '根據您的健康需求推薦最佳住宿',
+                hotel_location: '住宿地區',
+                hotel_type: '住宿類型',
+                hotel_all: '所有類型',
+                hotel_luxury: '豪華酒店',
+                hotel_resort: '度假村',
+                hotel_boutique: '精品酒店',
+                hotel_budget: '經濟型',
+                check_in: '入住日期',
+                check_out: '退房日期',
+                hotel_guests: '住客人數',
+                hotel_rooms: '房間數',
+                search_hotels_btn: '搜尋酒店',
+                recommended_hotels: '為您推薦的酒店',
+                book_hotels: '直接預訂酒店',
+                hotel_booking_platforms: '選擇您偏好的酒店預訂平台：',
+                next: '下一步',
+                walking: '步行',
+                accessible: '無障礙',
+                open_official_map: '開啟澳門官方地圖',
+                loading_map: '正在載入澳門地圖...',
+                flight_title: '✈️ 智能機票推薦',
+                flight_subtitle: '根據您的健康狀況推薦最佳航班',
+                from: '出發地',
+                to: '目的地',
+                depart_date: '出發日期',
+                passengers: '乘客數',
+                search_flights: '搜尋航班',
+                recommended_flights: '為您推薦的航班',
+                book_flights: '直接預訂機票',
+                booking_platforms: '選擇您偏好的機票預訂平台：',
+                continue_to_itinerary: '繼續查看行程',
+                select_start_date: '請選擇開始日期',
+                select_end_date: '請選擇結束日期',
+                end_before_start: '結束日期不能早於開始日期',
+                days: '天'
+            },
+            'zh-CN': {
+                welcome_title: '健康旅行',
+                welcome_subtitle: '我在',
+                start_btn: '开始',
+                skip_form: '跳过填写资料',
+                privacy_note: '🔒 您的资料仅用于提供个性化旅游建议，我们不会将您的资料用于其他用途',
+                age_title: '请告诉我您的年龄',
+                age_placeholder: '输入年龄',
+                gender_title: '您的性别是？',
+                male: '男性',
+                female: '女性',
+                other: '其他',
+                menstruation_title: '请问您是否有月经？',
+                yes: '是',
+                no: '否',
+                disease_title: '请问您是否有慢性疾病？',
+                no_disease: '没有',
+                yes_disease: '有',
+                disease_type_label: '请选择疾病类型（可多选）：',
+                heart_disease: '心脏疾病',
+                diabetes: '糖尿病',
+                respiratory: '呼吸系统疾病',
+                mobility: '行动不便/残疾',
+                hypertension: '高血压',
+                arthritis: '关节炎',
+                map_title: '🗺️ 澳门地图',
+                map_hint: '点击区域查看天气信息',
+                penha: '澳门半岛',
+                taipa: '氹仔',
+                coloane: '路环',
+                cotai: '路氹城',
+                temperature: '温度',
+                humidity: '湿度',
+                wind: '风速',
+                close: '关闭',
+                generate_route: '一键生成旅行路线',
+                itinerary_title: '🌟 您的健康旅行路线',
+                itinerary_subtitle: '专为您量身定制',
+                accessibility_desc: '已为您规划无障碍通道和设施',
+                eco_desc: '优先步行，减少碳排放',
+                co2_saved: '减碳 2.5kg CO₂',
+                trip_settings: '旅行设定',
+                travel_date: '选择旅行日期',
+                travel_period: '选择旅行期间',
+                route_selection: '选择路线',
+                select_start: '选择起始点',
+                select_destination: '选择目的地',
+                group_macau_local: '🇲🇴 澳门本地',
+                group_china: '🌏 中国及周边',
+                group_asia: '🗼 亚洲',
+                group_international: '✈️ 国际',
+                macau_peninsula: '澳门半岛',
+                taipa: '氹仔',
+                coloane: '路环',
+                cotai: '路氹城',
+                cotai_strip: '路氹金光大道',
+                macau_tower: '澳门旅游塔',
+                ruins_paulo: '大三巴牌坊',
+                macau_airport: '澳门国际机场',
+                hong_kong: '香港',
+                zhuhai: '珠海',
+                other_location: '其他（自行选择）',
+                select_other_hint: '请在地图上选择位置',
+                trip_duration: '共 {days} 天',
+                companions: '和谁一起去？（可多选）',
+                alone: '自己一人',
+                family: '家人',
+                friends: '朋友',
+                partner: '伴侣',
+                elderly: '长者',
+                kids: '小朋友',
+                disabled: '行动不便者',
+                intensity: '旅行强度',
+                light: '轻松',
+                moderate: '适中',
+                active: '活力',
+                cancel: '取消',
+                generate: '生成路线',
+                new_plan: '重新规划',
+                back: '返回',
+                skip_form: '跳过填写资料',
+                privacy_note: '🔒 您的资料仅用于提供个性化旅游建议，我们不会将您的资料用于其他用途',
+                search_hotels: '🏨 搜索酒店',
+                external_redirect_title: '已开启外部网站',
+                external_redirect_hint: '外部网站已在新标签页开启',
+                external_redirect_return: '关闭外部分页，或点击浏览器上方标签切换回到「健康旅行」页面即可继续使用',
+                return_app: '返回应用程序',
+                hotel_platform_title: '🏨 选择酒店预订平台',
+                hotel_platform_hint: '选择您偏好的酒店预订网站',
+                hotel_title: '🏨 智能酒店推荐',
+                hotel_subtitle: '根据您的健康需求推荐最佳住宿',
+                hotel_location: '住宿地区',
+                hotel_type: '住宿类型',
+                hotel_all: '所有类型',
+                hotel_luxury: '豪华酒店',
+                hotel_resort: '度假村',
+                hotel_boutique: '精品酒店',
+                hotel_budget: '经济型',
+                check_in: '入住日期',
+                check_out: '退房日期',
+                hotel_guests: '住客人数',
+                hotel_rooms: '房间数',
+                search_hotels_btn: '搜索酒店',
+                recommended_hotels: '为您推荐的酒店',
+                book_hotels: '直接预订酒店',
+                hotel_booking_platforms: '选择您偏好的酒店预订平台：',
+                next: '下一步',
+                walking: '步行',
+                accessible: '无障碍',
+                open_official_map: '开启澳门官方地图',
+                loading_map: '正在加载澳门地图...',
+                flight_title: '✈️ 智能机票推荐',
+                flight_subtitle: '根据您的健康状况推荐最佳航班',
+                from: '出发地',
+                to: '目的地',
+                depart_date: '出发日期',
+                passengers: '乘客数',
+                search_flights: '搜索航班',
+                recommended_flights: '为您推荐的航班',
+                book_flights: '直接预订机票',
+                booking_platforms: '选择您偏好的机票预订平台：',
+                continue_to_itinerary: '继续查看行程',
+                select_start_date: '请选择开始日期',
+                select_end_date: '请选择结束日期',
+                end_before_start: '结束日期不能早于开始日期',
+                days: '天'
+            },
+            'en': {
+                welcome_title: 'Health Travel',
+                welcome_subtitle: "I'm Here",
+                start_btn: 'Start',
+                skip_form: 'Skip Form',
+                privacy_note: '🔒 Your data is only used for personalized travel recommendations and will not be used for other purposes',
+                age_title: 'Please tell me your age',
+                age_placeholder: 'Enter age',
+                gender_title: 'What is your gender?',
+                male: 'Male',
+                female: 'Female',
+                other: 'Other',
+                menstruation_title: 'Do you have menstruation?',
+                yes: 'Yes',
+                no: 'No',
+                disease_title: 'Do you have chronic diseases?',
+                no_disease: 'None',
+                yes_disease: 'Yes',
+                disease_type_label: 'Select disease types (multiple choice):',
+                heart_disease: 'Heart Disease',
+                diabetes: 'Diabetes',
+                respiratory: 'Respiratory Disease',
+                mobility: 'Mobility/Disability',
+                hypertension: 'Hypertension',
+                arthritis: 'Arthritis',
+                map_title: '🗺️ Macau Map',
+                map_hint: 'Click on an area to view weather',
+                penha: 'Macau Peninsula',
+                taipa: 'Taipa',
+                coloane: 'Coloane',
+                cotai: 'Cotai',
+                temperature: 'Temperature',
+                humidity: 'Humidity',
+                wind: 'Wind',
+                close: 'Close',
+                generate_route: 'Generate Travel Route',
+                itinerary_title: '🌟 Your Health Travel Route',
+                itinerary_subtitle: 'Customized for you',
+                accessibility_desc: 'Wheelchair accessible routes planned',
+                eco_desc: 'Walking first, reduce carbon',
+                co2_saved: 'Save 2.5kg CO₂',
+                trip_settings: 'Trip Settings',
+                travel_date: 'Select Travel Date',
+                travel_period: 'Select Travel Period',
+                route_selection: 'Select Route',
+                select_start: 'Select Start',
+                select_destination: 'Select Destination',
+                group_macau_local: '🇲🇴 Macau Local',
+                group_china: '🌏 China & Nearby',
+                group_asia: '🗼 Asia',
+                group_international: '✈️ International',
+                macau_peninsula: 'Macau Peninsula',
+                taipa: 'Taipa',
+                coloane: 'Coloane',
+                cotai: 'Cotai',
+                cotai_strip: 'Cotai Strip',
+                macau_tower: 'Macau Tower',
+                ruins_paulo: 'Ruins of St. Paul',
+                macau_airport: 'Macau Airport',
+                hong_kong: 'Hong Kong',
+                zhuhai: 'Zhuhai',
+                other_location: 'Other (choose yourself)',
+                select_other_hint: 'Please select location on map',
+                trip_duration: '{days} days',
+                companions: 'Who are you traveling with? (multiple)',
+                alone: 'Solo',
+                family: 'Family',
+                friends: 'Friends',
+                partner: 'Partner',
+                elderly: 'Elderly',
+                kids: 'Kids',
+                disabled: 'Disabled',
+                intensity: 'Trip Intensity',
+                light: 'Light',
+                moderate: 'Moderate',
+                active: 'Active',
+                cancel: 'Cancel',
+                generate: 'Generate',
+                new_plan: 'New Plan',
+                back: 'Back',
+                skip_form: 'Skip Form',
+                privacy_note: '🔒 Your data is only used for personalized travel recommendations and will not be used for other purposes',
+                search_hotels: '🏨 Search Hotels',
+                external_redirect_title: 'External Site Opened',
+                external_redirect_hint: 'The external website has been opened in a new tab',
+                external_redirect_return: 'Close the external tab or click the browser tab to switch back to "Health Travel" to continue',
+                return_app: 'Return to App',
+                hotel_platform_title: '🏨 Select Hotel Booking Platform',
+                hotel_platform_hint: 'Choose your preferred hotel booking website',
+                hotel_title: '🏨 Smart Hotel Recommendations',
+                hotel_subtitle: 'Best accommodations based on your health needs',
+                hotel_location: 'Accommodation Area',
+                hotel_type: 'Accommodation Type',
+                hotel_all: 'All Types',
+                hotel_luxury: 'Luxury Hotel',
+                hotel_resort: 'Resort',
+                hotel_boutique: 'Boutique Hotel',
+                hotel_budget: 'Budget',
+                check_in: 'Check-in Date',
+                check_out: 'Check-out Date',
+                hotel_guests: 'Guests',
+                hotel_rooms: 'Rooms',
+                search_hotels_btn: 'Search Hotels',
+                recommended_hotels: 'Recommended Hotels',
+                book_hotels: 'Book Hotels Directly',
+                hotel_booking_platforms: 'Choose your preferred hotel booking platform:',
+                next: 'Next',
+                walking: 'Walk',
+                accessible: 'Accessible',
+                open_official_map: 'Open Macau Official Map',
+                loading_map: 'Loading Macau map...',
+                flight_title: '✈️ Smart Flight Recommendations',
+                flight_subtitle: 'Best flights based on your health profile',
+                from: 'From',
+                to: 'To',
+                depart_date: 'Departure Date',
+                passengers: 'Passengers',
+                search_flights: 'Search Flights',
+                recommended_flights: 'Recommended Flights',
+                book_flights: 'Book Flights',
+                booking_platforms: 'Choose your preferred booking platform:',
+                continue_to_itinerary: 'Continue to Itinerary',
+                select_start_date: 'Please select start date',
+                select_end_date: 'Please select end date',
+                end_before_start: 'End date cannot be before start date',
+                days: 'days'
+            },
+            'ko': {
+                welcome_title: '건강 여행',
+                welcome_subtitle: '내가 여기 있어',
+                start_btn: '시작',
+                skip_form: '양식 건너뛰기',
+                privacy_note: '🔒 귀하의 데이터는 개인화된 여행 추천에만 사용되며 다른 목적으로 사용되지 않습니다',
+                age_title: '나이를 알려주세요',
+                age_placeholder: '나이 입력',
+                gender_title: '성별이 무엇인가요?',
+                male: '남성',
+                female: '여성',
+                other: '기타',
+                menstruation_title: '월경이 있나요?',
+                yes: '네',
+                no: '아니오',
+                disease_title: '만성 질환이 있나요?',
+                no_disease: '없음',
+                yes_disease: '있음',
+                disease_type_label: '질병 유형 선택 (다중 선택):',
+                heart_disease: '심장 질환',
+                diabetes: '당뇨병',
+                respiratory: '호흡기 질환',
+                mobility: '이동 장애/장애',
+                hypertension: '고혈압',
+                arthritis: '관절염',
+                map_title: '🗺️ 마카오 지도',
+                map_hint: '지역을 클릭하여 날씨 확인',
+                penha: '마카오 반도',
+                taipa: '타이파',
+                coloane: '콜로아네',
+                cotai: '코타이',
+                temperature: '온도',
+                humidity: '습도',
+                wind: '바람',
+                close: '닫기',
+                generate_route: '여행 경로 생성',
+                itinerary_title: '🌟님의 건강 여행 경로',
+                itinerary_subtitle: '맞춤형으로 준비됨',
+                accessibility_desc: '무장애 경로 계획됨',
+                eco_desc: '도보 우선, 탄소 배출 감소',
+                co2_saved: 'CO₂ 2.5kg 절감',
+                trip_settings: '여행 설정',
+                travel_date: '여행 날짜 선택',
+                travel_period: '여행 기간 선택',
+                route_selection: '경로 선택',
+                select_start: '출발지 선택',
+                select_destination: '목적지 선택',
+                group_macau_local: '🇲🇴 마카오 현지',
+                group_china: '🌏 중국 및 주변',
+                group_asia: '🗼 아시아',
+                group_international: '✈️ 국제',
+                macau_peninsula: '마카오 반도',
+                taipa: '타이파',
+                coloane: '콜로아네',
+                cotai: '코타이',
+                cotai_strip: '코타이 스트립',
+                macau_tower: '마카오 타워',
+                ruins_paulo: '성 바울 묘',
+                macau_airport: '마카오 공항',
+                hong_kong: '홍콩',
+                zhuhai: '주하이',
+                other_location: '기타 (직접 선택)',
+                select_other_hint: '지도에서 위치를 선택해 주세요',
+                trip_duration: '총 {days}일',
+                companions: '누구와 함께? (다중 선택)',
+                alone: '혼자',
+                family: '가족',
+                friends: '친구',
+                partner: '배우자',
+                elderly: '노인',
+                kids: '아이들',
+                disabled: '장애인',
+                intensity: '여행 강도',
+                light: '가볍게',
+                moderate: '적당히',
+                active: '활발하게',
+                cancel: '취소',
+                generate: '생성',
+                new_plan: '새 계획',
+                back: '뒤로',
+                skip_form: '양식 건너뛰기',
+                privacy_note: '🔒 귀하의 데이터는 개인화된 여행 추천에만 사용되며 다른 목적으로 사용되지 않습니다',
+                search_hotels: '🏨 호텔 검색',
+                external_redirect_title: '외부 사이트 열림',
+                external_redirect_hint: '외부 웹사이트가 새 탭에서 열렸습니다',
+                external_redirect_return: '외부 탭을 닫거나 브라우저 탭에서 「건강 여행」으로 다시 전환해 주세요',
+                return_app: '앱으로 돌아가기',
+                hotel_platform_title: '🏨 호텔 예약 플랫폼 선택',
+                hotel_platform_hint: '선호하는 호텔 예약 웹사이트를 선택하세요',
+                hotel_title: '🏨 스마트 호텔 추천',
+                hotel_subtitle: '건강 상태에 맞는 최적의 숙소',
+                hotel_location: '숙박 지역',
+                hotel_type: '숙소 유형',
+                hotel_all: '모든 유형',
+                hotel_luxury: '럭셔리 호텔',
+                hotel_resort: '리조트',
+                hotel_boutique: '부티크 호텔',
+                hotel_budget: '이코노미',
+                check_in: '체크인 날짜',
+                check_out: '체크아웃 날짜',
+                hotel_guests: '투숙객 수',
+                hotel_rooms: '객실 수',
+                search_hotels_btn: '호텔 검색',
+                recommended_hotels: '추천 호텔',
+                book_hotels: '호텔 직접 예약',
+                hotel_booking_platforms: '선호하는 호텔 예약 플랫폼을 선택하세요:',
+                next: '다음',
+                walking: '도보',
+                accessible: '무장애',
+                open_official_map: '마카오 공식 지도 열기',
+                loading_map: '마카오 지도 로딩 중...',
+                flight_title: '✈️ 스마트 항공권 추천',
+                flight_subtitle: '건강 상태에 맞는 최적의 항공편',
+                from: '출발지',
+                to: '도착지',
+                depart_date: '출발일',
+                passengers: '승객 수',
+                search_flights: '항공편 검색',
+                recommended_flights: '추천 항공편',
+                book_flights: '항공권 예약',
+                booking_platforms: '선호하는 예약 플랫폼을 선택하세요:',
+                continue_to_itinerary: '일정으로 계속',
+                select_start_date: '출발일을 선택해주세요',
+                select_end_date: '귀국일을 선택해주세요',
+                end_before_start: '귀국일은 출발일보다 늦어야 합니다',
+                days: '일'
+            },
+            'ja': {
+                welcome_title: 'ヘルス旅行',
+                welcome_subtitle: '私がここにいる',
+                start_btn: '始める',
+                age_title: '年齢を教えてください',
+                age_placeholder: '年齢を入力',
+                gender_title: '性別は何ですか？',
+                male: '男性',
+                female: '女性',
+                other: 'その他',
+                menstruation_title: '生理はありますか？',
+                yes: 'はい',
+                no: 'いいえ',
+                disease_title: '慢性疾患はありますか？',
+                no_disease: 'なし',
+                yes_disease: 'あり',
+                disease_type_label: '病気の種類を選択（複数可）：',
+                heart_disease: '心臓病',
+                diabetes: '糖尿病',
+                respiratory: '呼吸器疾患',
+                mobility: '移動障碍/障害',
+                hypertension: '高血压',
+                arthritis: '関節炎',
+                map_title: '🗺️ マカオ地図',
+                map_hint: '地域をクリックして天気を確認',
+                penha: 'マカオ半島',
+                taipa: 'タイパ',
+                coloane: 'コロアン',
+                cotai: 'コタイ',
+                temperature: '気温',
+                humidity: '湿度',
+                wind: '風速',
+                close: '閉じる',
+                generate_route: '旅行ルートを生成',
+                itinerary_title: '🌟 健康旅行ルート',
+                itinerary_subtitle: 'お客様専用プラン',
+                accessibility_desc: 'スロープのある経路を計画',
+                eco_desc: '徒歩優先、CO₂削減',
+                co2_saved: 'CO₂ 2.5kg削減',
+                trip_settings: '旅行設定',
+                travel_date: '旅行日を選択',
+                travel_period: '旅行期間を選択',
+                route_selection: 'ルート選択',
+                select_start: '出発地選択',
+                select_destination: '目的地選択',
+                group_macau_local: '🇲🇴 マカオ現地',
+                group_china: '🌏 中国及び周辺',
+                group_asia: '🗼 アジア',
+                group_international: '✈️ 国際',
+                macau_peninsula: 'マカオ半島',
+                taipa: 'タイパ',
+                coloane: 'コロアン',
+                cotai: 'コタイ',
+                cotai_strip: 'コタイストリップ',
+                macau_tower: 'マカオタワー',
+                ruins_paulo: '聖保禄学院跡',
+                macau_airport: 'マカオ国際空港',
+                hong_kong: '香港',
+                zhuhai: '珠海',
+                other_location: 'その他（自分で選択）',
+                select_other_hint: '地図で場所を選択してください',
+                trip_duration: '合計 {days}日',
+                companions: '誰と行く？（複数選択可）',
+                alone: '一人',
+                family: '家族',
+                friends: '友達',
+                partner: 'パートナー',
+                elderly: '高齢者',
+                kids: '子供',
+                disabled: '障碍者',
+                intensity: '旅行の強さ',
+                light: '<minimax:tool_call>',
+                moderate: '適切',
+                active: 'アクティブ',
+                cancel: 'キャンセル',
+                generate: '生成',
+                new_plan: '新プラン',
+                back: '戻る',
+                skip_form: '入力をスキップ',
+                privacy_note: '🔒 あなたのデータはパーソナライズされた旅行提案のみに使用されます',
+                search_hotels: '🏨 ホテルを検索',
+                external_redirect_title: '外部サイトが開きました',
+                external_redirect_hint: '外部ウェブサイトが新しいタブで開いています',
+                external_redirect_return: '外部タブを閉じるか、ブラウザのタブで「健康旅行」に切り替えてください',
+                return_app: 'アプリに戻る',
+                hotel_platform_title: '🏨 ホテル予約プラットフォームを選択',
+                hotel_platform_hint: 'お気に入りのホテル予約ウェブサイトを選択してください',
+                hotel_title: '🏨 スマートホテル推薦',
+                hotel_subtitle: '健康状態に合った最適な宿泊施設',
+                hotel_location: '宿泊エリア',
+                hotel_type: '宿泊タイプ',
+                hotel_all: 'すべてのタイプ',
+                hotel_luxury: 'ラグジュアリーホテル',
+                hotel_resort: 'リゾート',
+                hotel_boutique: 'ブティックホテル',
+                hotel_budget: 'エコノミー',
+                check_in: 'チェックイン日',
+                check_out: 'チェックアウト日',
+                hotel_guests: '宿泊人数',
+                hotel_rooms: '部屋数',
+                search_hotels_btn: 'ホテルを検索',
+                recommended_hotels: 'おすすめホテル',
+                book_hotels: 'ホテルを直接予約',
+                hotel_booking_platforms: 'お好みのホテル予約プラットフォームを選択してください：',
+                next: '次へ',
+                walking: '徒歩',
+                accessible: 'スロープ',
+                open_official_map: 'マカオ公式地図を開く',
+                loading_map: 'マカオ地図を読み込み中...',
+                flight_title: '✈️ スマートフライト推薦',
+                flight_subtitle: '健康状態に合った最適なフライト',
+                from: '出発地',
+                to: '目的地',
+                depart_date: '出発日',
+                passengers: '乗客数',
+                search_flights: 'フライトを検索',
+                recommended_flights: 'おすすめのフライト',
+                book_flights: 'フライトを予約',
+                booking_platforms: 'ご希望の予約プラットフォームを選択:',
+                continue_to_itinerary: '旅程を続ける',
+                select_start_date: '開始日を選択してください',
+                select_end_date: '終了日を選択してください',
+                end_before_start: '終了日は開始日より後である必要があります',
+                days: '日'
+            },
+            'pt': {
+                welcome_title: 'Viagem Saudável',
+                welcome_subtitle: 'Estou Aqui',
+                start_btn: 'Começar',
+                skip_form: 'Pular Formulário',
+                privacy_note: '🔒 Os seus dados são utilizados apenas para recomendações de viagem personalizadas',
+                age_title: 'Por favor, diga-me sua idade',
+                age_placeholder: 'Digite a idade',
+                gender_title: 'Qual é o seu género?',
+                male: 'Masculino',
+                female: 'Feminino',
+                other: 'Outro',
+                menstruation_title: 'Você tem menstruação?',
+                yes: 'Sim',
+                no: 'Não',
+                disease_title: 'Você tem doenças crónicas?',
+                no_disease: 'Nenhuma',
+                yes_disease: 'Sim',
+                disease_type_label: 'Selecione tipos de doença (múltipla escolha):',
+                heart_disease: 'Doença Cardíaca',
+                diabetes: 'Diabetes',
+                respiratory: 'Doença Respiratória',
+                mobility: 'Mobilidade/Deficiência',
+                hypertension: 'Hipertensão',
+                arthritis: 'Artrite',
+                map_title: '🗺️ Mapa de Macau',
+                map_hint: 'Clique numa área para ver o clima',
+                penha: 'Península de Macau',
+                taipa: 'Taipa',
+                coloane: 'Coloane',
+                cotai: 'Cotai',
+                temperature: 'Temperatura',
+                humidity: 'Humidade',
+                wind: 'Vento',
+                close: 'Fechar',
+                generate_route: 'Gerar Rota de Viagem',
+                itinerary_title: '🌟 Sua Rota de Viagem Saudável',
+                itinerary_subtitle: 'Personalizada para você',
+                accessibility_desc: 'Rotas acessíveis planeadas',
+                eco_desc: 'Prioridade a pé, menos carbono',
+                co2_saved: 'Poupe 2.5kg CO₂',
+                trip_settings: 'Configurações da Viagem',
+                travel_date: 'Selecionar Data da Viagem',
+                travel_period: 'Selecionar Período da Viagem',
+                route_selection: 'Selecionar Rota',
+                select_start: 'Selecionar Partida',
+                select_destination: 'Selecionar Destino',
+                group_macau_local: '🇲🇴 Macau Local',
+                group_china: '🌏 China e Arredores',
+                group_asia: '🗼 Ásia',
+                group_international: '✈️ Internacional',
+                macau_peninsula: 'Península de Macau',
+                taipa: 'Taipa',
+                coloane: 'Coloane',
+                cotai: 'Cotai',
+                cotai_strip: 'Cotai Strip',
+                macau_tower: 'Torre de Macau',
+                ruins_paulo: 'Ruínas de São Paulo',
+                macau_airport: 'Aeroporto de Macau',
+                hong_kong: 'Hong Kong',
+                zhuhai: 'Zhuhai',
+                other_location: 'Outro (escolher)',
+                select_other_hint: 'Por favor selecione no mapa',
+                trip_duration: '{days} dias',
+                companions: 'Com quem vai? (múltipla escolha)',
+                alone: 'Sozinho',
+                family: 'Família',
+                friends: 'Amigos',
+                partner: 'Companheiro',
+                elderly: 'Idosos',
+                kids: 'Crianças',
+                disabled: 'Deficientes',
+                intensity: 'Intensidade da Viagem',
+                light: 'Leve',
+                moderate: 'Moderado',
+                active: 'Ativo',
+                cancel: 'Cancelar',
+                generate: 'Gerar',
+                new_plan: 'Novo Plano',
+                back: 'Voltar',
+                skip_form: 'Pular Formulário',
+                privacy_note: '🔒 Os seus dados são utilizados apenas para recomendações de viagem personalizadas',
+                search_hotels: '🏨 Procurar Hotéis',
+                external_redirect_title: 'Site Externo Aberto',
+                external_redirect_hint: 'O site externo foi aberto num novo separador',
+                external_redirect_return: 'Feche o separador externo ou mude para o separador "Viagem Saudável" para continuar',
+                return_app: 'Voltar ao App',
+                hotel_platform_title: '🏨 Selecionar Plataforma de Reserva de Hotéis',
+                hotel_platform_hint: 'Escolha o seu site de reserva de hotéis preferido',
+                hotel_title: '🏨 Recomendações Inteligentes de Hotéis',
+                hotel_subtitle: 'Melhores acomodações com base nas suas necessidades de saúde',
+                hotel_location: 'Área de Acomodação',
+                hotel_type: 'Tipo de Acomodação',
+                hotel_all: 'Todos os Tipos',
+                hotel_luxury: 'Hotel de Luxo',
+                hotel_resort: 'Resort',
+                hotel_boutique: 'Hotel Boutique',
+                hotel_budget: 'Económico',
+                check_in: 'Data de Check-in',
+                check_out: 'Data de Check-out',
+                hotel_guests: 'Hóspedes',
+                hotel_rooms: 'Quartos',
+                search_hotels_btn: 'Procurar Hotéis',
+                recommended_hotels: 'Hotéis Recomendados',
+                book_hotels: 'Reservar Hotéis Diretamente',
+                hotel_booking_platforms: 'Escolha a sua plataforma de reserva de hotéis preferida:',
+                next: 'Próximo',
+                walking: 'A pé',
+                accessible: 'Acessível',
+                open_official_map: 'Abrir Mapa Oficial de Macau',
+                loading_map: 'A carregar o mapa de Macau...',
+                flight_title: '✈️ Recomendações Inteligentes de Voos',
+                flight_subtitle: 'Melhores voos com base no seu perfil de saúde',
+                from: 'De',
+                to: 'Para',
+                depart_date: 'Data de Partida',
+                passengers: 'Passageiros',
+                search_flights: 'Pesquisar Voos',
+                recommended_flights: 'Voos Recomendados',
+                book_flights: 'Reservar Voos',
+                booking_platforms: 'Escolha a sua plataforma de reserva preferida:',
+                continue_to_itinerary: 'Continuar para o Itinerário',
+                select_start_date: 'Por favor, selecione a data de início',
+                select_end_date: 'Por favor, selecione a data de término',
+                end_before_start: 'A data de término não pode ser anterior à data de início',
+                days: 'dias'
+            }
+        };
+
+        // Location coordinates for Macau areas
+        const locationCoords = {
+            penha: { lat: 22.2006, lon: 113.5461, name: '澳門半島' },
+            taipa: { lat: 22.1569, lon: 113.5499, name: '氹仔' },
+            coloane: { lat: 22.1326, lon: 113.5559, name: '路環' },
+            cotai: { lat: 22.1420, lon: 113.5540, name: '路氹城' }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupLanguageSelector();
+            setupRadioGroups();
+            setupFormNavigation();
+            setMinDate();
+            updateProgress(0);
+        });
+
+        // Language Selector
+        function setupLanguageSelector() {
+            const selector = document.getElementById('languageSelector');
+            const dropdown = document.getElementById('languageDropdown');
+            
+            selector.addEventListener('click', function(e) {
+                e.stopPropagation();
+                dropdown.classList.toggle('show');
+            });
+            
+            document.addEventListener('click', function() {
+                dropdown.classList.remove('show');
+            });
+            
+            const options = dropdown.querySelectorAll('.language-option');
+            options.forEach(option => {
+                option.addEventListener('click', function() {
+                    const lang = this.dataset.lang;
+                    changeLanguage(lang);
+                    options.forEach(o => o.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+        }
+
+        function changeLanguage(lang) {
+            currentLang = lang;
+            document.documentElement.lang = lang;
+            
+            const t = translations[lang];
+            const langNames = {
+                'zh-TW': '繁體中文',
+                'zh-CN': '简体中文',
+                'en': 'English',
+                'ko': '한국어',
+                'ja': '日本語',
+                'pt': 'Português'
+            };
+            
+            document.getElementById('currentLangName').textContent = langNames[lang];
+            
+            // Update all elements with data-i18n
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.dataset.i18n;
+                if (t[key]) {
+                    el.textContent = t[key];
+                }
+            });
+            
+            // Update placeholders
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.dataset.i18nPlaceholder;
+                if (t[key]) {
+                    el.placeholder = t[key];
+                }
+            });
+        }
+
+        // Navigation
+        function goToPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            
+            // Update language selector visibility
+            const langSelector = document.getElementById('languageSelector');
+            if (pageId === 'page-welcome') {
+                langSelector.classList.add('visible');
+            } else {
+                langSelector.classList.add('visible');
+            }
+            
+            // Update progress
+            const progressSteps = {
+                'page-welcome': 0,
+                'page-age': 20,
+                'page-gender': 40,
+                'page-menstruation': 50,
+                'page-disease': 60,
+                'page-map': 70,
+                'page-flights': 80,
+                'page-hotels': 85,
+                'page-itinerary': 100
+            };
+            updateProgress(progressSteps[pageId] || 0);
+        }
+
+        // Skip to map without filling form
+        function skipToMap() {
+            // Set default values for skipped form fields
+            userProfile = {
+                age: 30,
+                gender: null,
+                hasMenstruation: null,
+                hasDisease: null,
+                diseases: [],
+                companions: [],
+                intensity: 'moderate',
+                travelDate: null,
+                travelEndDate: null,
+                startLocation: null,
+                destination: null
+            };
+            goToPage('page-map');
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressFill').style.width = percent + '%';
+        }
+
+        // Form Handling
+        function setupRadioGroups() {
+            document.querySelectorAll('.radio-group').forEach(group => {
+                const items = group.querySelectorAll('.radio-item');
+                items.forEach(item => {
+                    item.addEventListener('click', function() {
+                        items.forEach(i => i.classList.remove('selected'));
+                        this.classList.add('selected');
+                    });
+                });
+            });
+        }
+
+        function selectRadio(element, type) {
+            const parent = element.parentElement;
+            parent.querySelectorAll('.radio-item').forEach(i => i.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
+        function toggleCheckbox(element) {
+            element.classList.toggle('selected');
+        }
+
+        function saveAge() {
+            const age = document.getElementById('ageInput').value;
+            if (!age || age < 1 || age > 120) {
+                alert(translations[currentLang].age_placeholder);
+                return;
+            }
+            userProfile.age = parseInt(age);
+            goToPage('page-gender');
+        }
+
+        function saveGender() {
+            const selected = document.querySelector('#genderGroup .radio-item.selected');
+            if (!selected) {
+                alert('請選擇性別');
+                return;
+            }
+            userProfile.gender = selected.dataset.value;
+            
+            if (userProfile.gender === 'female') {
+                goToPage('page-menstruation');
+            } else {
+                goToPage('page-disease');
+            }
+        }
+
+        function showDiseaseTypes() {
+            document.getElementById('diseaseTypes').style.display = 'block';
+        }
+
+        function saveDisease() {
+            const selected = document.querySelector('#page-disease .radio-group .radio-item.selected');
+            if (!selected) {
+                alert('請選擇');
+                return;
+            }
+            
+            userProfile.hasDisease = selected.dataset.value === 'yes';
+            
+            if (userProfile.hasDisease) {
+                const checked = document.querySelectorAll('#diseaseCheckboxes .checkbox-item.selected');
+                userProfile.diseases = Array.from(checked).map(c => c.dataset.value);
+            }
+            
+            goToPage('page-map');
+        }
+
+        // Weather - Real API via Open-Meteo (free, no key needed)
+        async function showWeather(area) {
+            const card = document.getElementById('weatherCard');
+            const location = locationCoords[area];
+            
+            document.getElementById('weatherLocation').textContent = location.name;
+            
+            // Show loading, hide data/error
+            document.getElementById('weatherLoading').style.display = 'flex';
+            document.getElementById('weatherData').style.display = 'none';
+            document.getElementById('weatherError').style.display = 'none';
+            document.getElementById('weatherUpdated').textContent = '';
+            
+            card.classList.add('show');
+            
+            try {
+                // Open-Meteo free API - no API key required
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=Asia%2FMacau`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data && data.current) {
+                    document.getElementById('weatherTemp').textContent = data.current.temperature_2m + '°C';
+                    document.getElementById('weatherHumidity').textContent = data.current.relative_humidity_2m + '%';
+                    document.getElementById('weatherWind').textContent = data.current.wind_speed_10m + ' km/h';
+                    
+                    const updateTime = new Date().toLocaleTimeString('zh-Hant', { hour: '2-digit', minute: '2-digit' });
+                    document.getElementById('weatherUpdated').textContent = `🕐 更新時間：${updateTime}（實時數據）`;
+                    
+                    document.getElementById('weatherLoading').style.display = 'none';
+                    document.getElementById('weatherData').style.display = 'block';
+                } else {
+                    throw new Error('天氣數據不可用');
+                }
+            } catch (error) {
+                console.error('天氣 API 錯誤:', error);
+                document.getElementById('weatherLoading').style.display = 'none';
+                document.getElementById('weatherData').style.display = 'none';
+                document.getElementById('weatherError').style.display = 'block';
+                document.getElementById('weatherError').textContent = '⚠️ 暫時無法獲取實時天氣，請稍後再試';
+            }
+        }
+
+        function closeWeather() {
+            document.getElementById('weatherCard').classList.remove('show');
+        }
+
+        // ========== Leaflet 互動地圖初始化 ==========
+        let macauMap = null;
+        let mapInitialized = false;
+
+        function initLeafletMap() {
+            if (mapInitialized) return;
+            
+            const mapDiv = document.getElementById('leafletMap');
+            if (!mapDiv) return;
+            
+            // 初始化 Leaflet 地圖，中心定位澳門
+            macauMap = L.map('leafletMap', {
+                center: [22.16, 113.55],
+                zoom: 14,
+                zoomControl: true,
+                attributionControl: true
+            });
+            
+            // 使用 OpenStreetMap 圖層
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19
+            }).addTo(macauMap);
+            
+            // 定義區域資訊
+            const areas = [
+                { id: 'penha',    lat: 22.2006, lon: 113.5461, name: '澳門半島', emoji: '🏙️', desc: '歷史城區・大三巴・議事亭' },
+                { id: 'taipa',    lat: 22.1569, lon: 113.5499, name: '氹仔',       emoji: '🍜', desc: '官也街・美食・龍環葡韻' },
+                { id: 'cotai',    lat: 22.1420, lon: 113.5540, name: '路氹城',     emoji: '🎰', desc: '威尼斯人・金光大道' },
+                { id: 'coloane',  lat: 22.1326, lon: 113.5559, name: '路環',       emoji: '🏖️', desc: '黑沙海灘・媽祖文化村' }
+            ];
+            
+            // 加入標記點
+            areas.forEach(area => {
+                // 自訂 marker icon
+                const markerIcon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div class="marker-pulse">
+                        <div class="marker-dot"></div>
+                        <div class="marker-ring"></div>
+                    </div>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15],
+                    popupAnchor: [0, -15]
+                });
+                
+                const marker = L.marker([area.lat, area.lon], { icon: markerIcon }).addTo(macauMap);
+                
+                // popup 內容
+                const popupContent = `
+                    <div class="area-popup">
+                        <strong>${area.emoji} ${area.name}</strong>
+                        <div class="popup-desc">${area.desc}</div>
+                        <button class="popup-btn" onclick="showWeather('${area.id}'); macauMap.closePopup();">
+                            🌤️ 查看實時天氣
+                        </button>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent, { closeButton: false });
+                
+                // 點擊 marker 也觸發天氣查詢
+                marker.on('click', () => {
+                    // popup 中的按鈕會處理
+                });
+            });
+            
+            // 地圖載入完成，隱藏 loading
+            macauMap.on('load', () => {
+                hideMapLoading();
+            });
+            
+            // 如果 tiles 3 秒後還沒觸發 load，手動隱藏 loading
+            setTimeout(() => {
+                hideMapLoading();
+            }, 3000);
+            
+            mapInitialized = true;
+        }
+
+        // 頁面跳轉到地圖時初始化 Leaflet
+        const originalGoToPage = goToPage;
+        goToPage = function(pageId) {
+            originalGoToPage(pageId);
+            if (pageId === 'page-map') {
+                setTimeout(() => initLeafletMap(), 200);
+            }
+            // 當離開地圖頁時，invalidate size
+            if (macauMap && pageId !== 'page-map') {
+                setTimeout(() => macauMap.invalidateSize(), 100);
+            }
+        };
+
+        function hideMapLoading() {
+            const loading = document.getElementById('mapLoading');
+            if (loading) {
+                loading.classList.add('hidden');
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                }, 500);
+            }
+        }
+
+        // 開啟澳門官方地圖
+        function openOfficialMap() {
+            openExternalAndReturn('https://webmap.gis.gov.mo/MapGIS/index.html');
+        }
+
+        // Trip Modal
+        function showTripModal() {
+            document.getElementById('tripModal').classList.add('show');
+        }
+
+        function closeTripModal() {
+            document.getElementById('tripModal').classList.remove('show');
+        }
+
+        // External Redirect Modal
+        let hasExternalRedirect = false;
+        
+        function showExternalRedirectModal() {
+            hasExternalRedirect = true;
+            document.getElementById('externalRedirectModal').classList.add('show');
+            document.getElementById('returnBanner').style.display = 'block';
+        }
+
+        function closeExternalRedirectModal() {
+            hasExternalRedirect = false;
+            document.getElementById('externalRedirectModal').classList.remove('show');
+            document.getElementById('returnBanner').style.display = 'none';
+        }
+        
+        // Detect when user switches back to our tab from external site
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && hasExternalRedirect) {
+                // User came back! Re-show everything
+                const modal = document.getElementById('externalRedirectModal');
+                if (!modal.classList.contains('show')) {
+                    modal.classList.add('show');
+                }
+                document.getElementById('returnBanner').style.display = 'block';
+            }
+        });
+
+        function setMinDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('travelDate').min = today;
+            document.getElementById('travelEndDate').min = today;
+            document.getElementById('flightDate').min = today;
+
+            // Add event listeners for date range calculation
+            document.getElementById('travelDate').addEventListener('change', updateTripDuration);
+            document.getElementById('travelEndDate').addEventListener('change', updateTripDuration);
+        }
+
+        function updateTripDuration() {
+            const startDate = document.getElementById('travelDate').value;
+            const endDate = document.getElementById('travelEndDate').value;
+            const durationEl = document.getElementById('tripDuration');
+            
+            if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                const diffTime = Math.abs(end - start);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                
+                if (end < start) {
+                    durationEl.textContent = translations[currentLang].end_before_start || '結束日期不能早於開始日期';
+                    durationEl.style.color = '#d32f2f';
+                } else {
+                    const durationText = translations[currentLang].trip_duration.replace('{days}', diffDays);
+                    durationEl.textContent = durationText;
+                    durationEl.style.color = '#666';
+                }
+            }
+        }
+
+        // Flight Search Functions
+        function searchFlights() {
+            const departure = document.getElementById('departureCity').value;
+            const arrival = document.getElementById('arrivalCity').value;
+            const date = document.getElementById('flightDate').value;
+            const passengers = document.getElementById('passengerCount').value;
+
+            if (!date) {
+                alert(translations[currentLang].select_date || '請選擇日期');
+                return;
+            }
+
+            // Generate health tips based on user profile
+            generateHealthFlightTips();
+
+            // Generate flight recommendations
+            generateFlightRecommendations(departure, arrival, date, passengers);
+
+            // Show recommendations section
+            document.getElementById('flightRecommendations').style.display = 'block';
+        }
+
+        function generateHealthFlightTips() {
+            const tips = [];
+            const t = translations[currentLang];
+
+            // Based on user age
+            if (userProfile.age && userProfile.age > 60) {
+                tips.push('建議選擇直飛航班，減少轉機疲勞');
+                tips.push('預訂靠近走道的座位，方便起身活動');
+            }
+
+            if (userProfile.age && userProfile.age > 70) {
+                tips.push('建議隨身攜帶醫療證明和處方藥物');
+                tips.push('避免選擇紅眼航班，確保充足休息');
+            }
+
+            // Based on gender (menstruation)
+            if (userProfile.gender === 'female' && userProfile.hasMenstruation) {
+                tips.push('長途飛行建議穿著舒適衣物，攜帶備用衛生用品');
+            }
+
+            // Based on diseases
+            if (userProfile.hasDisease) {
+                if (userProfile.diseases.includes('heart')) {
+                    tips.push('心臟疾病患者建議選擇直飛航班');
+                    tips.push('隨身攜帶心臟藥物和醫療卡');
+                }
+                if (userProfile.diseases.includes('diabetes')) {
+                    tips.push('糖尿病患者建議隨身攜帶胰島素和血糖儀');
+                    tips.push('預訂航班時可申請特殊餐飲');
+                }
+                if (userProfile.diseases.includes('respiratory')) {
+                    tips.push('呼吸系統疾病患者建議避免過長航班');
+                    tips.push('隨身攜帶吸入器和相關藥物');
+                }
+                if (userProfile.diseases.includes('mobility')) {
+                    tips.push('輪椅旅客可申請機場輪椅服務');
+                    tips.push('建議預訂第一排座位，方便出入');
+                    tips.push('可申請特殊協助服務');
+                }
+                if (userProfile.diseases.includes('hypertension')) {
+                    tips.push('高血壓患者建議選擇白天航班');
+                    tips.push('避免咖啡因飲料，多喝水');
+                }
+                if (userProfile.diseases.includes('arthritis')) {
+                    tips.push('關節炎患者建議選擇直飛航班');
+                    tips.push('穿著彈性衣物，適時起身伸展');
+                }
+            }
+
+            // Universal tips
+            tips.push('飛行前避免大量進食和碳酸飲料');
+            tips.push('多喝水，保持身體水分');
+
+            // Display tips
+            const tipsContent = document.getElementById('healthTipsContent');
+            let html = '<ul>';
+            tips.forEach(tip => {
+                html += `<li>${tip}</li>`;
+            });
+            html += '</ul>';
+            tipsContent.innerHTML = html;
+        }
+
+        function generateFlightRecommendations(departure, arrival, date, passengers) {
+            const flightsList = document.getElementById('flightsList');
+            
+            // Simulated flight data based on user profile
+            const flights = [
+                {
+                    airline: '澳門航空',
+                    flightNum: 'NX001',
+                    departure: departure,
+                    arrival: arrival,
+                    depTime: '08:30',
+                    arrTime: '10:45',
+                    duration: '2h 15m',
+                    price: 1250 + Math.round(Math.random() * 500),
+                    features: ['直飛', '含行李'],
+                    recommended: true,
+                    ecoFriendly: true,
+                    carbonOffset: '↓ 0.8kg CO₂'
+                },
+                {
+                    airline: '國泰航空',
+                    flightNum: 'CX001',
+                    departure: departure,
+                    arrival: arrival,
+                    depTime: '14:20',
+                    arrTime: '16:35',
+                    duration: '2h 15m',
+                    price: 1580 + Math.round(Math.random() * 600),
+                    features: ['優質服務', '貴賓室'],
+                    recommended: false,
+                    ecoFriendly: false,
+                    carbonOffset: ''
+                },
+                {
+                    airline: '長榮航空',
+                    flightNum: 'BR001',
+                    departure: departure,
+                    arrival: arrival,
+                    depTime: '19:00',
+                    arrTime: '21:15',
+                    duration: '2h 15m',
+                    price: 1180 + Math.round(Math.random() * 400),
+                    features: ['含餐', '電影'],
+                    recommended: false,
+                    ecoFriendly: true,
+                    carbonOffset: '↓ 0.5kg CO₂'
+                }
+            ];
+
+            // Adjust recommendations based on user profile
+            if (userProfile.diseases && userProfile.diseases.includes('mobility')) {
+                // Prioritize direct flights for wheelchair users
+                flights.sort((a, b) => {
+                    if (a.features.includes('直飛') && !b.features.includes('直飛')) return -1;
+                    if (!a.features.includes('直飛') && b.features.includes('直飛')) return 1;
+                    return 0;
+                });
+            }
+
+            if (userProfile.age && userProfile.age > 60) {
+                // Prioritize daytime flights for elderly
+                flights.sort((a, b) => {
+                    const aHour = parseInt(a.depTime.split(':')[0]);
+                    const bHour = parseInt(b.depTime.split(':')[0]);
+                    if (aHour >= 8 && aHour <= 18 && (bHour < 8 || bHour > 18)) return -1;
+                    if ((aHour < 8 || aHour > 18) && bHour >= 8 && bHour <= 18) return 1;
+                    return 0;
+                });
+            }
+
+            let html = '';
+            flights.forEach(flight => {
+                const recommendedClass = flight.recommended ? 'recommended' : '';
+                const ecoClass = flight.ecoFriendly ? 'eco-friendly' : '';
+                const badge = flight.recommended ? '<span class="flight-badge">推薦</span>' : '';
+                const ecoBadge = flight.ecoFriendly ? `<span class="eco-badge">🌿 ${flight.carbonOffset}</span>` : '';
+
+                html += `
+                    <div class="flight-card ${recommendedClass} ${ecoClass}">
+                        <div class="flight-card-header">
+                            <span class="flight-airline">${flight.airline} ${flight.flightNum} ${ecoBadge}</span>
+                            ${badge}
+                        </div>
+                        <div class="flight-route">
+                            <div class="flight-time">
+                                <div class="time">${flight.depTime}</div>
+                                <div class="code">${flight.departure}</div>
+                            </div>
+                            <div class="flight-duration">
+                                <div class="flight-duration-line"></div>
+                                <div class="duration">${flight.duration}</div>
+                            </div>
+                            <div class="flight-time">
+                                <div class="time">${flight.arrTime}</div>
+                                <div class="code">${flight.arrival}</div>
+                            </div>
+                        </div>
+                        <div class="flight-card-footer">
+                            <div>
+                                <div class="flight-price">MOP ${flight.price} <span>/ ${passengers}位</span></div>
+                                <div class="flight-features">
+                                    ${flight.features.map(f => `<span class="flight-feature">${f}</span>`).join('')}
+                                </div>
+                            </div>
+                            <button class="flight-book-btn" onclick="openBookingSite('skyscanner')">
+                                ${translations[currentLang].book_now || '預訂'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            flightsList.innerHTML = html;
+        }
+
+        // Search Hotels - Navigate to hotel page
+        function searchHotels() {
+            // Pre-fill dates from user profile if available
+            if (userProfile.travelDate) {
+                document.getElementById('hotelCheckIn').value = userProfile.travelDate;
+            }
+            if (userProfile.travelEndDate) {
+                document.getElementById('hotelCheckOut').value = userProfile.travelEndDate;
+            }
+            // Set min date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('hotelCheckIn').min = today;
+            document.getElementById('hotelCheckOut').min = today;
+            
+            goToPage('page-hotels');
+            // Auto-generate recommendations
+            setTimeout(() => searchHotelsPage(), 300);
+        }
+
+        // Search Hotels Page - Generate recommendations
+        function searchHotelsPage() {
+            const location = document.getElementById('hotelLocation').value;
+            const type = document.getElementById('hotelType').value;
+            const checkIn = document.getElementById('hotelCheckIn').value;
+            const checkOut = document.getElementById('hotelCheckOut').value;
+            const guests = document.getElementById('hotelGuests').value;
+            const rooms = document.getElementById('hotelRooms').value;
+
+            if (!checkIn) {
+                alert(translations[currentLang].select_date || '請選擇入住日期');
+                return;
+            }
+
+            // Set check-out to check-in + 1 if not set
+            if (!checkOut) {
+                const nextDay = new Date(checkIn);
+                nextDay.setDate(nextDay.getDate() + 1);
+                document.getElementById('hotelCheckOut').value = nextDay.toISOString().split('T')[0];
+            }
+
+            // Generate health tips
+            generateHealthHotelTips();
+            
+            // Generate hotel recommendations
+            generateHotelRecommendations(location, type, guests);
+            
+            // Show recommendations
+            document.getElementById('hotelRecommendations').style.display = 'block';
+        }
+
+        function generateHealthHotelTips() {
+            const tips = [];
+            
+            if (userProfile.age && userProfile.age > 60) {
+                tips.push('建議選擇低樓層或有電梯的酒店，方便出入');
+                tips.push('優先考慮有24小時前台服務的酒店');
+            }
+            
+            if (userProfile.age && userProfile.age > 70) {
+                tips.push('建議選擇鄰近醫院的酒店，以備不時之需');
+                tips.push('確認酒店提供緊急呼叫服務');
+            }
+            
+            if (userProfile.hasDisease) {
+                if (userProfile.diseases.includes('mobility')) {
+                    tips.push('輪椅使用者：選擇有無障礙房間的酒店');
+                    tips.push('確認酒店設有無障礙浴室及寬敞走廊');
+                    tips.push('優先選擇有輪椅坡道和電梯的酒店');
+                }
+                if (userProfile.diseases.includes('heart') || userProfile.diseases.includes('hypertension')) {
+                    tips.push('建議選擇環境安靜的酒店，避免靠近馬路');
+                    tips.push('確認酒店可提供低鹽餐飲選擇');
+                }
+                if (userProfile.diseases.includes('respiratory')) {
+                    tips.push('選擇禁煙樓層，確保空氣質量良好');
+                    tips.push('確認酒店有空氣淨化設備');
+                }
+                if (userProfile.diseases.includes('diabetes')) {
+                    tips.push('確認酒店可提供冰箱存放胰島素');
+                    tips.push('優先選擇有餐廳的酒店，方便定時用餐');
+                }
+            }
+            
+            tips.push('預訂前查看酒店評價，尤其是衛生狀況');
+            tips.push('選擇靠近公共交通或主要景點的酒店');
+            
+            const tipsContent = document.getElementById('healthHotelTipsContent');
+            let html = '<ul>';
+            tips.forEach(tip => {
+                html += `<li>${tip}</li>`;
+            });
+            html += '</ul>';
+            tipsContent.innerHTML = html;
+        }
+
+        function generateHotelRecommendations(location, type, guests) {
+            const hotelsList = document.getElementById('hotelsList');
+            const t = translations[currentLang];
+            
+            // Hotel data by area
+            const hotelsByArea = {
+                'macau-peninsula': [
+                    { name: '澳門葡京酒店', star: '⭐⭐⭐⭐⭐', area: '澳門半島', desc: '市中心地標酒店，鄰近議事亭前地', price: 1200, amenities: ['WiFi', '泳池', '餐廳', '健身房'], accessible: true, eco: true },
+                    { name: '澳門十六浦索菲特', star: '⭐⭐⭐⭐⭐', area: '澳門半島', desc: '海傍五星級酒店，無敵海景', price: 1500, amenities: ['WiFi', 'SPA', '餐廳', '酒吧'], accessible: true, eco: false },
+                    { name: '澳門維景酒店', star: '⭐⭐⭐⭐', area: '澳門半島', desc: '鄰近大三巴，步行可達主要景點', price: 680, amenities: ['WiFi', '餐廳', '商務中心'], accessible: true, eco: true },
+                    { name: '澳門新新酒店', star: '⭐⭐⭐', area: '澳門半島', desc: '經濟實惠，位置便利', price: 380, amenities: ['WiFi', '24小時前台'], accessible: false, eco: true }
+                ],
+                'taipa': [
+                    { name: '澳門君怡酒店', star: '⭐⭐⭐⭐', area: '氹仔', desc: '鄰近官也街，方便品嚐美食', price: 880, amenities: ['WiFi', '泳池', '餐廳'], accessible: true, eco: true },
+                    { name: '澳門盛世酒店', star: '⭐⭐⭐⭐', area: '氹仔', desc: '氹仔市中心，交通便利', price: 750, amenities: ['WiFi', '健身房', '餐廳'], accessible: true, eco: false },
+                    { name: '澳門金皇冠中國大酒店', star: '⭐⭐⭐', area: '氹仔', desc: '鄰近機場，適合短期住宿', price: 450, amenities: ['WiFi', '接駁車'], accessible: true, eco: true }
+                ],
+                'cotai': [
+                    { name: '澳門威尼斯人', star: '⭐⭐⭐⭐⭐', area: '路氹城', desc: '最大綜合度假村，運河購物中心', price: 1800, amenities: ['WiFi', '泳池', '賭場', '購物', 'SPA'], accessible: true, eco: false },
+                    { name: '澳門巴黎人', star: '⭐⭐⭐⭐⭐', area: '路氹城', desc: '巴黎鐵塔景觀，浪漫住宿體驗', price: 1600, amenities: ['WiFi', '泳池', '餐廳', 'SPA'], accessible: true, eco: false },
+                    { name: '新濠影滙', star: '⭐⭐⭐⭐⭐', area: '路氹城', desc: '8字形摩天輪，娛樂設施豐富', price: 1500, amenities: ['WiFi', '泳池', '餐廳', '娛樂場'], accessible: true, eco: false },
+                    { name: '永利皇宮', star: '⭐⭐⭐⭐⭐', area: '路氹城', desc: '觀光纜車、音樂噴泉表演', price: 2000, amenities: ['WiFi', '泳池', 'SPA', '名店'], accessible: true, eco: false }
+                ],
+                'coloane': [
+                    { name: '澳門鷺環海天度假酒店', star: '⭐⭐⭐⭐⭐', area: '路環', desc: '海濱度假村，寧靜悠閒', price: 1100, amenities: ['WiFi', '泳池', 'SPA', '高爾夫'], accessible: false, eco: true },
+                    { name: '竹灣酒店', star: '⭐⭐⭐', area: '路環', desc: '海灘旁民宿風格住宿', price: 550, amenities: ['WiFi', '海景'], accessible: false, eco: true }
+                ]
+            };
+            
+            let hotels = hotelsByArea[location] || Object.values(hotelsByArea).flat();
+            
+            // Filter by type
+            if (type !== 'all') {
+                const typeMap = {
+                    'luxury': h => h.star.includes('⭐⭐⭐⭐⭐'),
+                    'resort': h => h.amenities.includes('SPA') || h.amenities.includes('泳池'),
+                    'boutique': h => h.price >= 600 && h.price <= 1200,
+                    'budget': h => h.price <= 600
+                };
+                if (typeMap[type]) {
+                    hotels = hotels.filter(typeMap[type]);
+                }
+            }
+            
+            // Sort based on user profile
+            if (userProfile.diseases && userProfile.diseases.includes('mobility')) {
+                // Prioritize accessible hotels
+                hotels.sort((a, b) => (b.accessible ? 1 : 0) - (a.accessible ? 1 : 0));
+            }
+            
+            // Pick top 4
+            hotels = hotels.slice(0, 4);
+            
+            // Mark first as recommended
+            if (hotels.length > 0) hotels[0].badge = true;
+            
+            let html = '';
+            hotels.forEach((hotel, idx) => {
+                const recommendedClass = hotel.badge ? 'recommended' : '';
+                const ecoClass = hotel.eco ? 'eco-friendly' : '';
+                const badge = hotel.badge ? '<span class="hotel-badge">推薦</span>' : '';
+                const ecoBadge = hotel.eco ? '<span class="eco-badge">🌿 環保酒店</span>' : '';
+                const accessBadge = hotel.accessible ? '<span class="hotel-accessibility-tag">♿ 無障礙</span>' : '';
+                
+                html += `
+                    <div class="hotel-card ${recommendedClass} ${ecoClass}">
+                        <div class="hotel-card-header">
+                            <div>
+                                <div class="hotel-name">${hotel.name} ${ecoBadge}</div>
+                                <div class="hotel-star">${hotel.star}</div>
+                            </div>
+                            ${badge}
+                        </div>
+                        <div class="hotel-location">📍 ${hotel.desc}</div>
+                        <div class="hotel-amenities">
+                            ${hotel.amenities.map(a => `<span class="hotel-amenity">${a}</span>`).join('')}
+                            ${accessBadge}
+                        </div>
+                        <div class="hotel-card-footer">
+                            <div>
+                                <div class="hotel-price">MOP ${hotel.price} <span>/ 晚</span></div>
+                            </div>
+                            <button class="hotel-book-btn" onclick="openHotelPlatform('${idx === 0 ? 'booking' : 'agoda'}')">
+                                ${t.book_now || '預訂'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            hotelsList.innerHTML = html;
+        }
+
+        // Close Hotel Platform Modal
+        function closeHotelPlatformModal() {
+            document.getElementById('hotelPlatformModal').classList.remove('show');
+        }
+
+        // Open Hotel Platform
+        function openHotelPlatform(platform) {
+            const checkin = userProfile.travelDate || '';
+            const checkout = userProfile.travelEndDate || '';
+            
+            let url = '';
+            switch(platform) {
+                case 'booking':
+                    url = 'https://www.booking.com/searchresults.html?ss=Macau';
+                    if (checkin) url += `&checkin=${checkin}`;
+                    if (checkout) url += `&checkout=${checkout}`;
+                    break;
+                case 'agoda':
+                    url = 'https://www.agoda.com/zh-tw/search?city=macau&checkIn=' + checkin + '&checkOut=' + checkout;
+                    break;
+                case 'expedia':
+                    url = 'https://www.expedia.com/Hotel-Search?destination=Macau&endDate=' + checkout + '&startDate=' + checkin;
+                    break;
+                case 'hotels':
+                    url = 'https://www.hotels.com/search.do?destination=Macau&checkIn=' + checkin + '&checkOut=' + checkout;
+                    break;
+                case 'trip':
+                    url = 'https://www.trip.com/hotels/macau?checkin=' + checkin + '&checkout=' + checkout;
+                    break;
+                case 'airbnb':
+                    url = 'https://www.airbnb.com/s/Macau/homes?guests=1&checkin=' + checkin + '&checkout=' + checkout;
+                    break;
+            }
+            
+            // Close the platform modal first
+            closeHotelPlatformModal();
+            // Open external link with focus return
+            openExternalAndReturn(url);
+        }
+
+        // Helper: Open external link and return focus to current page
+        function openExternalAndReturn(url) {
+            // STEP 1: Show return modal FIRST so user sees it before tab switches
+            showExternalRedirectModal();
+            
+            // STEP 2: Open external link after a delay, giving user time to read
+            setTimeout(() => {
+                window.open(url, '_blank');
+            }, 800);
+            
+            // STEP 3: Try to bring focus back to our page
+            setTimeout(() => {
+                window.focus();
+            }, 1200);
+        }
+
+        function openBookingSite(platform) {
+            const departure = document.getElementById('departureCity').value;
+            const arrival = document.getElementById('arrivalCity').value;
+            const date = document.getElementById('flightDate').value;
+
+            let url = '';
+            switch(platform) {
+                case 'skyscanner':
+                    url = `https://www.skyscanner.com/transport/flights/${departure.toLowerCase()}/${arrival.toLowerCase()}/${date || ''}/`;
+                    break;
+                case 'kayak':
+                    url = `https://www.kayak.com/flights/${departure}-${arrival}/${date || ''}?sort=price_a`;
+                    break;
+                case 'expedia':
+                    url = `https://www.expedia.com/Flights-Search?trip=onetrip&leg1=from:${departure},to:${arrival},departure:${date || ''}TANYT&passengers=adults:1`;
+                    break;
+                case 'trip':
+                    url = `https://www.trip.com/flights/${departure.toLowerCase()}-to-${arrival.toLowerCase()}/tickets-${departure}-${arrival}/?depdate=${date || ''}&cabin=y&quantity=1`;
+                    break;
+            }
+
+            openExternalAndReturn(url);
+        }
+
+        // Generate Itinerary
+        function generateItinerary() {
+            // Save trip settings
+            userProfile.travelDate = document.getElementById('travelDate').value;
+            userProfile.travelEndDate = document.getElementById('travelEndDate').value;
+            userProfile.startLocation = document.getElementById('startLocation').value;
+            userProfile.destination = document.getElementById('destination').value;
+
+            // Validation
+            if (!userProfile.travelDate) {
+                alert(translations[currentLang].select_start_date || '請選擇開始日期');
+                return;
+            }
+            if (!userProfile.travelEndDate) {
+                alert(translations[currentLang].select_end_date || '請選擇結束日期');
+                return;
+            }
+            
+            const startDate = new Date(userProfile.travelDate);
+            const endDate = new Date(userProfile.travelEndDate);
+            if (endDate < startDate) {
+                alert(translations[currentLang].end_before_start || '結束日期不能早於開始日期');
+                return;
+            }
+            
+            // Get companions
+            userProfile.companions = [];
+            document.querySelectorAll('#companionCheckboxes .checkbox-item.selected').forEach(c => {
+                userProfile.companions.push(c.dataset.value);
+            });
+            
+            // Get intensity
+            const intensitySelected = document.querySelector('#intensityGroup .radio-item.selected');
+            if (intensitySelected) {
+                userProfile.intensity = intensitySelected.dataset.value;
+            }
+            
+            closeTripModal();
+            renderItinerary();
+            goToPage('page-itinerary');
+        }
+
+        // Generate Itinerary and Go (for button click)
+        function generateItineraryAndGo() {
+            showTripModal();
+        }
+
+        function renderItinerary() {
+            const t = translations[currentLang];
+            const isAccessible = (userProfile.hasDisease && userProfile.diseases.includes('mobility')) || 
+                                 (userProfile.companions && userProfile.companions.includes('disabled'));
+            
+            // Calculate trip duration
+            let tripDays = 1;
+            let startDate = new Date();
+            if (userProfile.travelDate) {
+                startDate = new Date(userProfile.travelDate);
+                if (userProfile.travelEndDate) {
+                    const end = new Date(userProfile.travelEndDate);
+                    tripDays = Math.max(1, Math.ceil((end - startDate) / (1000 * 60 * 60 * 24)) + 1);
+                }
+            }
+
+            // Generate multi-day itinerary
+            const dailyPlan = generateDailyPlan(tripDays, startDate, isAccessible);
+            
+            // Update header with trip info
+            let headerInfo = '';
+            const startStr = `${startDate.getMonth() + 1}/${startDate.getDate()}`;
+            if (tripDays === 1) {
+                headerInfo = ` ${startStr}`;
+            } else {
+                const endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + tripDays - 1);
+                const endStr = `${endDate.getMonth() + 1}/${endDate.getDate()}`;
+                headerInfo = ` ${startStr} - ${endStr}（${tripDays}${t.days || '天'}）`;
+            }
+
+            // Bus route data for Macau
+            const busForArea = {
+                'macau-peninsula→taipa': { num: '26A/33', time: '30分鐘', desc: '新馬路乘搭 26A、33 號巴士過橋' },
+                'macau-peninsula→cotai': { num: '25/26A/50', time: '35分鐘', desc: '乘搭 25、26A、50 號巴士' },
+                'macau-peninsula→coloane': { num: '21A/25/26A', time: '45分鐘', desc: '乘搭 21A、25、26A 號巴士' },
+                'taipa→cotai': { num: 'MT1/MT2/15', time: '15分鐘', desc: '乘搭 MT1、MT2、15 號巴士' },
+                'taipa→coloane': { num: '15/25/26', time: '30分鐘', desc: '乘搭 15、25、26 號巴士' },
+                'cotai→coloane': { num: '15/25/26A', time: '25分鐘', desc: '乘搭 15、25、26A 號巴士' },
+            };
+            
+            function getAreaForName(name) {
+                const clean = name.replace(/[🍽️🍜🥘🍛🦐🍰🧁☕🥪🍳🍲]/g, '').trim();
+                if (/大三巴|戀愛巷|议事亭|媽閣|东望洋|旅遊塔|新馬路|水坑尾|噴水池/.test(clean)) return 'macau-peninsula';
+                if (/龍環|官也|路氹博物館|嘉模/.test(clean)) return 'taipa';
+                if (/黑沙|路環|竹灣|聖方濟各|安德魯|譚公/.test(clean)) return 'coloane';
+                if (/威尼斯|巴黎|新濠|金光|銀河|美獅/.test(clean)) return 'cotai';
+                return null;
+            }
+
+            const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+            let html = '';
+            let totalCO2 = 0;
+
+            dailyPlan.forEach((day, dayIdx) => {
+                const dayDate = new Date(startDate);
+                dayDate.setDate(dayDate.getDate() + dayIdx);
+                const dateStr = `${dayDate.getMonth() + 1}/${dayDate.getDate()}`;
+                const weekDay = weekDays[dayDate.getDay()];
+                
+                html += `
+                    <div class="day-section">
+                        <div class="day-header">
+                            <div class="day-title">📅 第 ${dayIdx + 1} 天 — ${dateStr}（周${weekDay}）</div>
+                            <div class="day-theme">🏷️ ${day.theme}</div>
+                        </div>
+                        <div class="timeline">`;
+
+                day.attractions.forEach((item, i) => {
+                    const hour = 9 + i;
+                    const timeStr = `${String(hour).padStart(2, '0')}:00`;
+                    if (item.co2 && item.co2.includes('↓')) {
+                        const val = parseFloat(item.co2.replace(/[↓\s]/g, '').replace('kg', ''));
+                        if (!isNaN(val)) totalCO2 += val;
+                    }
+                    
+                    html += `
+                            <div class="timeline-item">
+                                <div class="timeline-time">${timeStr}</div>
+                                <div class="timeline-content">
+                                    <h4>${item.name}</h4>
+                                    <p>${item.desc}</p>`;
+                    
+                    // For mobility-impaired: show bus info instead of walking
+                    if (isAccessible) {
+                        if (i < day.attractions.length - 1) {
+                            const nextItem = day.attractions[i + 1];
+                            const fromArea = getAreaForName(item.name);
+                            const toArea = getAreaForName(nextItem.name);
+                            const routeKey = `${fromArea}→${toArea}`;
+                            const reverseKey = `${toArea}→${fromArea}`;
+                            
+                            if (fromArea && toArea && fromArea !== toArea) {
+                                const route = busForArea[routeKey] || busForArea[reverseKey];
+                                if (route) {
+                                    html += `<span class="timeline-transport-bus">🚌 ${route.desc}（約${route.time}）→ ${nextItem.name.replace(/[🍽️🍜🥘🍛🦐🍰🧁☕🥪🍳🍲]/g, '').trim()}</span>`;
+                                } else {
+                                    html += `<span class="timeline-transport-bus">🚌 建議乘搭巴士前往下一站 → ${nextItem.name.replace(/[🍽️🍜🥘🍛🦐]/g, '').trim()}</span>`;
+                                }
+                            } else if (fromArea && toArea && fromArea === toArea) {
+                                html += `<span class="timeline-transport-bus">♿ 無障礙短途（約5-10分鐘）→ ${nextItem.name.replace(/[🍽️🍜🥘🍛🦐]/g, '').trim()}</span>`;
+                            }
+                        }
+                        if (item.accessible) {
+                            html += `<span class="timeline-accessible">♿ ${t.accessible || '無障礙通道'}</span>`;
+                        }
+                    } else {
+                        if (item.walking) {
+                            html += `<span class="timeline-walking">🚶 ${t.walking} ${item.walkTime} (${item.co2})</span>`;
+                        }
+                    }
+                    
+                    html += `
+                                </div>
+                            </div>`;
+                });
+                
+                html += `
+                        </div>
+                    </div>`;
+            });
+            
+            document.getElementById('itineraryTimeline').innerHTML = html;
+
+            // Update header subtitle with dates
+            document.querySelector('#page-itinerary .itinerary-header p').textContent = 
+                `${userProfile.startLocation ? getLocationName(userProfile.startLocation) : ''} → ${userProfile.destination ? getLocationName(userProfile.destination) : ''}${headerInfo}`;
+            
+            // Update CO2 badge based on profile  
+            document.querySelector('#co2Badge span:last-child').textContent = `${t.co2_saved.replace('2.5', totalCO2.toFixed(1))}`;
+        }
+
+        function getLocationName(locationId) {
+            const locationNames = {
+                'macau-peninsula': translations[currentLang].macau_peninsula || '澳門半島',
+                'taipa': translations[currentLang].taipa || '氹仔',
+                'coloane': translations[currentLang].coloane || '路環',
+                'cotai': translations[currentLang].cotai || '路氹城',
+                'cotai-strip': translations[currentLang].cotai_strip || '路氹金光大道',
+                'macau-tower': translations[currentLang].macau_tower || '澳門旅遊塔',
+                'ruins-paulo': translations[currentLang].ruins_paulo || '大三巴牌坊',
+                'macau-airport': translations[currentLang].macau_airport || '澳門國際機場',
+                'hong-kong': translations[currentLang].hong_kong || '香港',
+                'zhuhai': translations[currentLang].zhuhai || '珠海',
+                'shenzhen': '深圳',
+                'guangzhou': '廣州',
+                'beijing': '北京',
+                'shanghai': '上海',
+                'taipei': '台北',
+                'tokyo': '東京',
+                'seoul': '首爾',
+                'singapore': '新加坡',
+                'bangkok': '曼谷',
+                'kuala-lumpur': '吉隆坡',
+                'manila': '馬尼拉',
+                'lisbon': '里斯本',
+                'sydney': '悉尼',
+                'london': '倫敦',
+                'new-york': '紐約',
+                'paris': '巴黎'
+            };
+            return locationNames[locationId] || locationId;
+        }
+
+        // Generate a multi-day itinerary plan
+        function generateDailyPlan(tripDays, startDate, isAccessible) {
+            // All available attractions by area
+            const allPeninsula = [
+                { name: '大三巴牌坊', desc: '澳門最具代表性的歷史地標', walkTime: '15分鐘', co2: '↓ 0.3kg', walking: true, accessible: true },
+                { name: '戀愛巷', desc: '浪漫小巷，適合拍照留念', walkTime: '10分鐘', co2: '↓ 0.2kg', walking: true, accessible: false },
+                { name: '议事亭前地', desc: '澳門市中心廣場，葡式建築', walkTime: '5分鐘', co2: '↓ 0.1kg', walking: true, accessible: true },
+                { name: '媽閣廟', desc: '澳門最古老的廟宇之一', walkTime: '20分鐘', co2: '↓ 0.4kg', walking: true, accessible: true },
+                { name: '東望洋炮台', desc: '可俯瞰澳門全景', walkTime: '25分鐘', co2: '↓ 0.5kg', walking: true, accessible: false },
+                { name: '澳門旅遊塔', desc: '高空觀景台，澳門全景', walkTime: '30分鐘', co2: '↓ 0.6kg', walking: true, accessible: true }
+            ];
+            const allTaipa = [
+                { name: '龍環葡韻', desc: '葡式住宅博物館，彩色小屋', walkTime: '30分鐘', co2: '↓ 0.6kg', walking: true, accessible: true },
+                { name: '官也街', desc: '美食購物街，榴槤雪糕', walkTime: '20分鐘', co2: '↓ 0.4kg', walking: true, accessible: true },
+                { name: '路氹博物館', desc: '了解路氹歷史', walkTime: '45分鐘', co2: '↓ 0.9kg', walking: true, accessible: true },
+                { name: '嘉模聖母堂', desc: '氹仔唯一的天主教堂', walkTime: '15分鐘', co2: '↓ 0.3kg', walking: true, accessible: true }
+            ];
+            const allCotai = [
+                { name: '威尼斯人', desc: '澳門最大型的綜合度假村，運河購物', walkTime: '60分鐘', co2: '↓ 1.2kg', walking: true, accessible: true },
+                { name: '巴黎人', desc: '巴黎鐵塔仿製品，浪漫夜景', walkTime: '45分鐘', co2: '↓ 0.9kg', walking: true, accessible: true },
+                { name: '新濠影匯', desc: '8字形摩天輪「影滙之星」', walkTime: '30分鐘', co2: '↓ 0.6kg', walking: true, accessible: true },
+                { name: '永利皇宮', desc: '觀光纜車、音樂噴泉', walkTime: '40分鐘', co2: '↓ 0.8kg', walking: true, accessible: true }
+            ];
+            const allColoane = [
+                { name: '黑沙海灘', desc: '欣賞美麗的黑沙灘風光', walkTime: '10分鐘', co2: '↓ 0.2kg', walking: true, accessible: false },
+                { name: '路環聖方濟各堂', desc: '優雅的巴洛克式教堂建築', walkTime: '20分鐘', co2: '↓ 0.4kg', walking: true, accessible: true },
+                { name: '竹灣海灘', desc: '靜謐的海灣風光', walkTime: '15分鐘', co2: '↓ 0.3kg', walking: true, accessible: false },
+                { name: '安德魯餅店', desc: '葡撻發源地，必試', walkTime: '10分鐘', co2: '↓ 0.2kg', walking: true, accessible: true }
+            ];
+
+            // Filter non-accessible if needed
+            function filterAccessible(list) {
+                if (isAccessible) return list.filter(a => a.accessible !== false);
+                return list;
+            }
+
+            // Calculate how many attractions per day based on intensity
+            let perDay;
+            const intensity = userProfile.intensity || 'moderate';
+            if (intensity === 'light') perDay = 3;
+            else if (intensity === 'moderate') perDay = 4;
+            else perDay = 5;
+
+            // Define the area rotation for multi-day trips
+            const areaOrder = ['peninsula', 'taipa', 'cotai', 'coloane'];
+            const areaData = {
+                'peninsula': { list: filterAccessible(allPeninsula), theme: '澳門半島歷史文化探索', lunch: '🍽️ 議事亭前地葡國菜午餐' },
+                'taipa': { list: filterAccessible(allTaipa), theme: '氹仔葡韻風情', lunch: '🍽️ 官也街地道美食午餐' },
+                'cotai': { list: filterAccessible(allCotai), theme: '路氹金光大道奢華體驗', lunch: '🍽️ 威尼斯人美食廣場午餐' },
+                'coloane': { list: filterAccessible(allColoane), theme: '路環悠閒海濱之旅', lunch: '🍽️ 安德魯餅店葡撻午餐' }
+            };
+
+            const dailyPlan = [];
+
+            for (let d = 0; d < tripDays; d++) {
+                const areaKey = areaOrder[d % areaOrder.length];
+                const area = areaData[areaKey];
+                const spots = [...area.list];
+                
+                // Pick attractions, cycling if not enough
+                let daySpots = [];
+                let needed = perDay - 1; // -1 because we add lunch
+                while (daySpots.length < needed) {
+                    for (let j = 0; j < spots.length && daySpots.length < needed; j++) {
+                        if (!daySpots.find(s => s.name === spots[j].name)) {
+                            daySpots.push(spots[j]);
+                        }
+                    }
+                    // If still not enough, add again (but this shouldn't happen)
+                    if (daySpots.length < needed && spots.length > 0) {
+                        const extras = spots.filter(s => !daySpots.find(ds => ds.name === s.name));
+                        if (extras.length === 0) break;
+                    }
+                }
+                
+                // Insert lunch in the middle
+                const lunchIdx = Math.floor(daySpots.length / 2);
+                daySpots.splice(lunchIdx, 0, { 
+                    name: area.lunch, 
+                    desc: '享用當地特色美食，補充能量', 
+                    type: 'meal', co2: '', walking: false, accessible: true 
+                });
+
+                dailyPlan.push({
+                    day: d + 1,
+                    theme: area.theme,
+                    attractions: daySpots
+                });
+            }
+
+            return dailyPlan;
+        }
+
+        function getAttractionsForArea(area) {
+            const areaAttractions = {
+                'macau-peninsula': [
+                    { name: '大三巴牌坊', desc: '澳門最具代表性的歷史地標', walkTime: '15分鐘', co2: '↓ 0.3kg', walking: true, accessible: true },
+                    { name: '戀愛巷', desc: '浪漫小巷，適合拍照留念', walkTime: '10分鐘', co2: '↓ 0.2kg', walking: true, accessible: false },
+                    { name: '议事亭前地', desc: '澳門市中心廣場，葡式建築', walkTime: '5分鐘', co2: '↓ 0.1kg', walking: true, accessible: true },
+                    { name: '媽閣廟', desc: '澳門最古老的廟宇之一', walkTime: '20分鐘', co2: '↓ 0.4kg', walking: true, accessible: true },
+                    { name: '東望洋炮台', desc: '可俯瞰澳門全景', walkTime: '25分鐘', co2: '↓ 0.5kg', walking: true, accessible: false }
+                ],
+                'taipa': [
+                    { name: '龍環葡韻', desc: '葡式住宅博物館，彩色小屋', walkTime: '30分鐘', co2: '↓ 0.6kg', walking: true, accessible: true },
+                    { name: '官也街', desc: '美食購物街，榴槤雪糕', walkTime: '20分鐘', co2: '↓ 0.4kg', walking: true, accessible: true },
+                    { name: '路氹博物館', desc: '了解路氹歷史', walkTime: '45分鐘', co2: '↓ 0.9kg', walking: true, accessible: true }
+                ],
+                'coloane': [
+                    { name: '黑沙海灘', desc: '欣賞美麗的黑沙灘風光', walkTime: '10分鐘', co2: '↓ 0.2kg', walking: true, accessible: false },
+                    { name: '路環聖方濟各堂', desc: '優雅的教堂建築', walkTime: '20分鐘', co2: '↓ 0.4kg', walking: true, accessible: true },
+                    { name: '竹灣海灘', desc: '靜謐的海灣風光', walkTime: '15分鐘', co2: '↓ 0.3kg', walking: true, accessible: false }
+                ],
+                'cotai': [
+                    { name: '威尼斯人', desc: '澳門最大型的綜合度假村', walkTime: '60分鐘', co2: '↓ 1.2kg', walking: true, accessible: true },
+                    { name: '巴黎人', desc: '巴黎鐵塔仿製品', walkTime: '45分鐘', co2: '↓ 0.9kg', walking: true, accessible: true },
+                    { name: '新濠影匯', desc: '8字摩天輪', walkTime: '30分鐘', co2: '↓ 0.6kg', walking: true, accessible: true }
+                ],
+                'cotai-strip': [
+                    { name: '威尼斯人', desc: '澳門最大型的綜合度假村', walkTime: '60分鐘', co2: '↓ 1.2kg', walking: true, accessible: true },
+                    { name: '巴黎人', desc: '巴黎鐵塔仿製品', walkTime: '45分鐘', co2: '↓ 0.9kg', walking: true, accessible: true },
+                    { name: '新濠影匯', desc: '8字摩天輪', walkTime: '30分鐘', co2: '↓ 0.6kg', walking: true, accessible: true }
+                ],
+                'macau-tower': [
+                    { name: '澳門旅遊塔', desc: '高空蹦極及觀景台', walkTime: '45分鐘', co2: '↓ 0.9kg', walking: true, accessible: true },
+                    { name: '议事亭前地', desc: '澳門市中心廣場', walkTime: '10分鐘', co2: '↓ 0.2kg', walking: true, accessible: true }
+                ],
+                'ruins-paulo': [
+                    { name: '大三巴牌坊', desc: '澳門最具代表性的歷史地標', walkTime: '15分鐘', co2: '↓ 0.3kg', walking: true, accessible: true },
+                    { name: '戀愛巷', desc: '浪漫小巷，適合拍照留念', walkTime: '10分鐘', co2: '↓ 0.2kg', walking: true, accessible: false }
+                ],
+                'macau-airport': [
+                    { name: '龍環葡韻', desc: '葡式住宅博物館', walkTime: '20分鐘', co2: '↓ 0.4kg', walking: true, accessible: true },
+                    { name: '官也街', desc: '美食購物街', walkTime: '15分鐘', co2: '↓ 0.3kg', walking: true, accessible: true }
+                ],
+                'hong-kong': [
+                    { name: '大三巴牌坊', desc: '澳門最具代表性的歷史地標', walkTime: '15分鐘', co2: '↓ 0.3kg', walking: true, accessible: true },
+                    { name: '威尼斯人', desc: '澳門最大型的綜合度假村', walkTime: '60分鐘', co2: '↓ 1.2kg', walking: true, accessible: true }
+                ],
+                'zhuhai': [
+                    { name: '大三巴牌坊', desc: '澳門最具代表性的歷史地標', walkTime: '15分鐘', co2: '↓ 0.3kg', walking: true, accessible: true },
+                    { name: '威尼斯人', desc: '澳門最大型的綜合度假村', walkTime: '60分鐘', co2: '↓ 1.2kg', walking: true, accessible: true }
+                ]
+            };
+            return areaAttractions[area] || areaAttractions['macau-peninsula'];
+        }
+
+        function calculateCO2(attractions) {
+            const totalCO2 = attractions.reduce((sum, a) => {
+                if (a.walking) {
+                    return sum + parseFloat(a.co2.replace('↓ ', '').replace('kg', ''));
+                }
+                return sum;
+            }, 0);
+            return totalCO2 + 2.5; // Base savings from walking
+        }
+
+        function setupFormNavigation() {
+            document.querySelectorAll('.radio-group').forEach(group => {
+                group.querySelectorAll('.radio-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        group.querySelectorAll('.radio-item').forEach(i => i.classList.remove('selected'));
+                        this.classList.add('selected');
+                    });
+                });
+            });
+        }
+    </script>
+</body>
+</html>
